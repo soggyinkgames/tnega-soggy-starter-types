@@ -1,0 +1,59 @@
+# ─────────────────────────────
+#  NODE / TYPESCRIPT PROJECT
+# ─────────────────────────────
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+.out/
+.next/
+.vercel/
+build/
+tmp/
+temp/
+cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment variables
+.env
+.env.*
+!.env.example          # but keep the example version
+
+# Supabase local config
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Coverage / test reports
+coverage/
+.vitest/
+jest-cache/
+jest-html-reporters-*
+
+# Misc
+*.log
+*.bak
+*.old
+*.tmp
+*.orig

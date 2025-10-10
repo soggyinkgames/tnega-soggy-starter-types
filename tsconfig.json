@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "rootDir": "./",
+        "outDir": "./dist",
+        "lib": [
+            "ESNext",
+            "DOM"
+        ], // Fetch API + modern features
+        "baseUrl": ".",
+        "paths": {
+            "@lib/*": [
+                "lib/*"
+            ],
+            "@agents/*": [
+                "agents/*"
+            ],
+            "@tools/*": [
+                "tools/*"
+            ],
+            "@templates/*": [
+                "templates/*"
+            ]
+        },
+        "esModuleInterop": true,
+        "strict": true,
+        "skipLibCheck": true
+    },
+    "include": [
+        "**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
