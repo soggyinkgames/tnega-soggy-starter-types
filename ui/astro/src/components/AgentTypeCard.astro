@@ -1,0 +1,36 @@
+---
+interface Props {
+  title: string;
+  slug: string;
+  description: string;
+  emoji: string;
+  accent?: string; // css color
+}
+const { title, slug, description, emoji, accent = '#7b61ff' } = Astro.props as Props;
+---
+<a href={`/agents/${slug}/new`} class="card">
+  <div class="thumb" style={`--accent:${accent}` as any}>
+    <div class="emoji">{emoji}</div>
+  </div>
+  <div class="meta">
+    <div class="title">{title}</div>
+    <div class="desc">{description}</div>
+  </div>
+  <div class="cta">Create</div>
+</a>
+<style>
+  .card { position:relative; display:grid; grid-template-columns: 100px 1fr auto; gap:14px; align-items:center; padding:14px; border-radius:16px; background: var(--card-grad-1); border:1px solid rgba(255,255,255,.06); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.12); box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+  .thumb { height:72px; border-radius:12px; background: radial-gradient(40px 40px at 70% 20%, color-mix(in oklab, var(--text) 20%, transparent), transparent),
+                     linear-gradient(135deg, color-mix(in oklab, var(--text) 8%, transparent), rgba(255,255,255,.02)),
+                     linear-gradient(135deg, var(--panel), #0b0f16);
+           border:1px solid rgba(255,255,255,.06); display:grid; place-items:center; position:relative; }
+  .thumb::after { content:''; position:absolute; inset:-1px; border-radius:12px; border:1px solid color-mix(in oklab, var(--text) 8%, transparent); pointer-events:none; }
+  .emoji { font-size:34px; filter: drop-shadow(0 6px 18px color-mix(in oklab, var(--text) 30%, transparent)); }
+  .meta .title { font-weight:700; font-size:1.05rem; }
+  .meta .desc { color: var(--muted); font-size:.85rem; margin-top:4px; }
+  .cta { padding:8px 12px; border-radius:12px; background: linear-gradient(135deg, var(--accent), #22d3ee); border:1px solid rgba(255,255,255,.12); font-weight:700; }
+  .card { --accent: {accent}; }
+  @media (max-width: 600px) { .card { grid-template-columns: 70px 1fr; } .cta { grid-column: 1 / -1; justify-self:end; } }
+</style>
+

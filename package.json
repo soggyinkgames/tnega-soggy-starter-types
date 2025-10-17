@@ -9,7 +9,10 @@
     "start": "node dist/server.js",
     "test": "vitest run --coverage",
     "test:watch": "vitest watch",
-    "new-agent": "tsx scripts/new-agent.ts"
+    "new-agent": "tsx scripts/new-agent.ts",
+    "ui:dev": "cd ui/astro && npm run dev",
+    "ui:build": "cd ui/astro && npm run build",
+    "ui:preview": "cd ui/astro && npm run preview"
   },
   "keywords": [],
   "author": "",

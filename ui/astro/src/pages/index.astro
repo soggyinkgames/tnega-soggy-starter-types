@@ -1,0 +1,47 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/Sidebar.astro";
+import TopAgent from "../components/TopAgent.astro";
+import RightPanel from "../components/RightPanel.astro";
+import AgentTypeCard from "../components/AgentTypeCard.astro";
+import { agentTypes } from "../data/agentTypes";
+---
+<BaseLayout title="Soggy Agents • Dashboard">
+  <Sidebar />
+
+  <main class="main">
+    <div class="search panel">
+      <input placeholder="Search items, collections, and agents" />
+      <div class="actions">
+        <button>🔔</button>
+        <button>⚙️</button>
+      </div>
+    </div>
+
+    <TopAgent title="Knowledge Insight" />
+
+    <section class="panel section">
+      <div class="section-title">Agents</div>
+      <div class="grid">
+        {agentTypes.map((t) => (
+          <AgentTypeCard {...t} />
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <RightPanel />
+
+  <style>
+    .main { display:flex; flex-direction:column; gap:18px; }
+    .search { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; }
+    .search input { flex:1; padding:12px 14px; border-radius:12px; background: #0d1420; border:1px solid rgba(255,255,255,.06); color: var(--text); outline:none; }
+    .search .actions { display:flex; gap:8px; }
+    .search button { width:40px; height:40px; border-radius:12px; background: #0d1420; color: var(--text); border:1px solid rgba(255,255,255,.06); }
+    .section { padding:16px; }
+    .section-title { font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#b9c4df; font-size:.9rem; margin-bottom:12px; }
+    .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:14px; }
+    @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</BaseLayout>
+

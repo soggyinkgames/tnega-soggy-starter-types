@@ -1,0 +1,59 @@
+---
+const nav = [
+  { label: 'Dashboard', icon: '🏠', href: '/' },
+  { label: 'Explore', icon: '🧭', href: '#' },
+  { label: 'Analysis', icon: '📊', href: '#' },
+  { label: 'Agents', icon: '🤖', href: '#' },
+  { label: 'Locations', icon: '📍', href: '#' },
+  { label: 'Favourites', icon: '⭐', href: '#' },
+];
+---
+<aside class="panel sidebar">
+  <div class="brand">
+    <div class="gem">🧠</div>
+    <span>Soggy Agents</span>
+  </div>
+  <nav>
+    {nav.map((n) => (
+      <a class="nav-item" href={n.href} aria-current={n.href === '/' ? 'page' : undefined}>
+        <span class="icon">{n.icon}</span>
+        <span>{n.label}</span>
+      </a>
+    ))}
+  </nav>
+  <div class="footer">
+    <div class="badge">
+      <div class="dot" />
+      <div class="meta">
+        <div class="title">Connected</div>
+        <div class="sub">API online</div>
+      </div>
+    </div>
+    <div class="user">
+      <div class="avatar">A</div>
+      <div>
+        <div class="u-name">Admin</div>
+        <div class="u-sub">Level 1</div>
+      </div>
+    </div>
+  </div>
+  <style>
+    .sidebar { padding: 18px; display: flex; flex-direction: column; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; }
+    .gem { width:30px; height:30px; display:grid; place-items:center; border-radius:10px; background: var(--brand); box-shadow: 0 6px 18px var(--ring); }
+    nav { margin-top: 20px; display:flex; flex-direction:column; gap:8px; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; color:#b9c4df; border:1px solid transparent; }
+    .nav-item[aria-current="page"], .nav-item:hover { background: var(--card-grad-1); border-color: rgba(255,255,255,.06); color: var(--text); }
+    .icon { width:22px; text-align:center; }
+    .footer { margin-top:auto; display:flex; flex-direction:column; gap:12px; }
+    .badge { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background: linear-gradient(135deg, #0e1a26, #0b111b); border:1px solid rgba(255,255,255,.05); }
+    .dot { width:10px; height:10px; border-radius:50%; background: var(--success); box-shadow: 0 0 12px var(--success); }
+    .meta .title { font-size:.9rem; font-weight:600; }
+    .meta .sub { font-size:.75rem; color: var(--muted); }
+    .user { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background: linear-gradient(135deg, #151b26, #0b0f16); border:1px solid rgba(255,255,255,.05); }
+    .avatar { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; background:#192338; font-weight:700; }
+    .u-name { font-size:.9rem; font-weight:600; }
+    .u-sub { font-size:.75rem; color: var(--muted); }
+  </style>
+</aside>
+
