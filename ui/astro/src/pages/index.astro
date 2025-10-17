@@ -33,15 +33,17 @@ import { agentTypes } from "../data/agentTypes";
   <RightPanel />
 
   <style>
-    .main { display:flex; flex-direction:column; gap:18px; }
+    .main { display:flex; flex-direction:column; gap:12px; max-width: 100%; }
     .search { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; }
     .search input { flex:1; padding:12px 14px; border-radius:12px; background: #0d1420; border:1px solid rgba(255,255,255,.06); color: var(--text); outline:none; }
     .search .actions { display:flex; gap:8px; }
-    .search button { width:40px; height:40px; border-radius:12px; background: #0d1420; color: var(--text); border:1px solid rgba(255,255,255,.06); }
+    .search button { width:40px; height:40px; border-radius:12px; background: #0d1420; color: var(--text); border:1px solid rgba(255,255,255,.14); }
+    .search button:focus-visible, .search input:focus-visible { outline: 2px solid #9bd5ff; outline-offset: 2px; }
     .section { padding:16px; }
     .section-title { font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#b9c4df; font-size:.9rem; margin-bottom:12px; }
-    .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:14px; }
-    @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    /* Container-driven card columns */
+    @container layout (min-width: 40rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; } .main { gap: 18px; } .section { padding:16px; } }
+    @container layout (min-width: 64rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </BaseLayout>
-

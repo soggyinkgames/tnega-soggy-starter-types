@@ -1,0 +1,27 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a1a0f"/>
+      <stop offset="1" stop-color="#0a0f1e"/>
+    </linearGradient>
+    <linearGradient id="ac" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#ff6ad5"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="16" fill="url(#bg)"/>
+  <!-- Simulator pilot -->
+  <g transform="translate(120,50)">
+    <circle cx="166" cy="116" r="56" fill="#24160e" stroke="#f59e0b" stroke-opacity=".45"/>
+    <path d="M132 112h68l-10 18h-48l-10-18z" fill="#f59e0b" opacity=".8"/>
+    <path d="M128 172c-14 18-40 30-40 52 0 24 36 40 78 40s78-16 78-40c0-22-26-34-40-52" fill="#120e0c" stroke="#f59e0b" stroke-opacity=".25"/>
+  </g>
+  <!-- Simulation grid -->
+  <g stroke="url(#ac)" stroke-opacity=".6">
+    <path d="M40 312h560"/>
+    <path d="M40 292h560" opacity=".7"/>
+    <path d="M40 272h560" opacity=".4"/>
+    <path d="M80 260l40 32 60-32 80 32 100-32 120 32"/>
+  </g>
+</svg>
+

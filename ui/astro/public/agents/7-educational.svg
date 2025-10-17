@@ -1,0 +1,25 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f223a"/>
+      <stop offset="1" stop-color="#0a0f1e"/>
+    </linearGradient>
+    <linearGradient id="ac" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#7b61ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="16" fill="url(#bg)"/>
+  <!-- Tutor with cap -->
+  <g transform="translate(120,50)">
+    <circle cx="166" cy="116" r="56" fill="#0c1b2c" stroke="#60a5fa" stroke-opacity=".45"/>
+    <path d="M120 110l46-18 46 18-46 16-46-16z" fill="#60a5fa"/>
+    <path d="M128 172c-14 18-40 30-40 52 0 24 36 40 78 40s78-16 78-40c0-22-26-34-40-52" fill="#0b121a" stroke="#60a5fa" stroke-opacity=".25"/>
+  </g>
+  <!-- Blackboard lines -->
+  <g stroke="url(#ac)" stroke-opacity=".6" stroke-width="3">
+    <line x1="60" y1="260" x2="240" y2="260"/>
+    <line x1="60" y1="284" x2="200" y2="284" opacity=".7"/>
+  </g>
+</svg>
+

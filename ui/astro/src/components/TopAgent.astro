@@ -33,6 +33,12 @@ const { title, subtitle = 'Play Time 463h', stat = '62%' } = Astro.props as Prop
     .right { display:grid; place-items:center; padding:10px 18px; }
     .big { font-size:64px; font-weight:800; background: var(--brand); -webkit-background-clip:text; background-clip:text; color: transparent; filter: drop-shadow(0 10px 30px rgba(124,93,250,.4)); }
     .sub { text-align:center; color:#b9c4df; }
+    @media (max-width: 1024px) { .big { font-size: 54px; } }
+    @media (max-width: 640px) {
+      .hero { grid-template-columns: 1fr; padding: 14px; }
+      h2 { font-size: 22px; }
+      .stats { gap: 10px; }
+      .big { font-size: 44px; }
+    }
   </style>
 </section>
-

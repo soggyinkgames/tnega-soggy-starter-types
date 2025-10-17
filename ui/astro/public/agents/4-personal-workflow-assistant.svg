@@ -1,0 +1,29 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f2a22"/>
+      <stop offset="1" stop-color="#0a0f1e"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="16" fill="url(#bg)"/>
+  <!-- Anime-like assistant with headset -->
+  <g transform="translate(120,50)">
+    <circle cx="166" cy="116" r="56" fill="#0f1f1a" stroke="#34d399" stroke-opacity=".45"/>
+    <path d="M128 172c-14 18-40 30-40 52 0 24 36 40 78 40s78-16 78-40c0-22-26-34-40-52" fill="#0c1412" stroke="#34d399" stroke-opacity=".25"/>
+    <rect x="120" y="112" width="20" height="12" rx="6" fill="#34d399"/>
+    <rect x="192" y="112" width="20" height="12" rx="6" fill="#34d399"/>
+    <path d="M212 118c10 0 18 8 18 18v12" stroke="#34d399" stroke-width="4"/>
+  </g>
+  <!-- Workflow glyphs -->
+  <g stroke="url(#g)" stroke-opacity=".7">
+    <rect x="52" y="252" width="44" height="26" rx="6" fill="#0c1612"/>
+    <rect x="124" y="252" width="44" height="26" rx="6" fill="#0c1612"/>
+    <rect x="196" y="252" width="44" height="26" rx="6" fill="#0c1612"/>
+    <path d="M96 265h28M168 265h28"/>
+  </g>
+</svg>
+

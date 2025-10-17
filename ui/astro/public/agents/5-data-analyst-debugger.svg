@@ -1,0 +1,25 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c1530"/>
+      <stop offset="1" stop-color="#0a0f1e"/>
+    </linearGradient>
+    <linearGradient id="ac" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="16" fill="url(#bg)"/>
+  <!-- Analyst with visor -->
+  <g transform="translate(120,50)">
+    <circle cx="166" cy="116" r="56" fill="#14122a" stroke="#a78bfa" stroke-opacity=".45"/>
+    <rect x="132" y="110" width="68" height="16" rx="8" fill="#a78bfa"/>
+    <path d="M128 172c-14 18-40 30-40 52 0 24 36 40 78 40s78-16 78-40c0-22-26-34-40-52" fill="#0d101e" stroke="#a78bfa" stroke-opacity=".25"/>
+  </g>
+  <!-- Charts -->
+  <g>
+    <rect x="60" y="248" width="170" height="76" rx="10" fill="#0f1426" stroke="#a78bfa" stroke-opacity=".25"/>
+    <path d="M80 304l20-26 24 18 28-40 30 22 26-34" stroke="url(#ac)" stroke-width="3" fill="none"/>
+  </g>
+</svg>
+

@@ -19,15 +19,27 @@
     <div class="text">Click any card to create an agent from its template.</div>
   </div>
   <style>
-    .right { padding: 16px; display:flex; flex-direction:column; gap:14px; }
-    .box { padding:14px; border-radius:14px; background: var(--card-grad-2); border:1px solid rgba(255,255,255,.06); }
+    /* Mobile-first: stacked full-width */
+    .right { padding: 10px; display:flex; flex-direction:column; gap:10px; position: static; max-width: 100%; }
+    .box { padding:10px; border-radius:12px; background: var(--card-grad-2); border:1px solid rgba(255,255,255,.06); max-width: 100%; overflow-wrap: anywhere; }
     .label { color:#b9c4df; font-size:.85rem; text-transform:uppercase; letter-spacing:.6px; font-weight:700; }
-    .value { font-size:1.6rem; font-weight:800; margin-top:6px; background: var(--brand); -webkit-background-clip:text; background-clip:text; color: transparent; }
-    .list ul { list-style:none; padding:0; margin:10px 0 0; display:flex; flex-direction:column; gap:8px; }
-    .list li { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); }
+    .value { font-size:1.2rem; font-weight:800; margin-top:6px; background: var(--brand); -webkit-background-clip:text; background-clip:text; color: transparent; }
+    .list ul { list-style:none; padding:0; margin:8px 0 0; display:flex; flex-direction:column; gap:6px; max-width: 100%; }
+    .list li { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); max-width: 100%; }
     .list span { color: var(--text); }
     .list b { color: var(--muted); font-weight:700; }
     .tip .text { margin-top:8px; color: var(--muted); }
+    /* Tablet: still stacked full width under main */
+    @container layout (min-width: 40rem) and (max-width: 63.99rem) {
+      .right { grid-column: 1 / -1; padding: 12px; gap: 12px; }
+      .box { padding: 12px; border-radius: 12px; }
+      .value { font-size: 1.3rem; }
+    }
+    /* Desktop: third column, sticky */
+    @container layout (min-width: 64rem) {
+      .right { position: sticky; top: 14px; padding: 16px; gap: 14px; }
+      .box { padding: 14px; border-radius: 14px; }
+      .value { font-size: 1.6rem; }
+    }
   </style>
 </aside>
-

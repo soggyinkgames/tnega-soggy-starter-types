@@ -8,7 +8,7 @@ const nav = [
   { label: 'Favourites', icon: '⭐', href: '#' },
 ];
 ---
-<aside class="panel sidebar">
+<aside id="app-sidebar" class="panel sidebar" aria-label="Primary" tabindex="-1">
   <div class="brand">
     <div class="gem">🧠</div>
     <span>Soggy Agents</span>
@@ -38,12 +38,15 @@ const nav = [
     </div>
   </div>
   <style>
-    .sidebar { padding: 18px; display: flex; flex-direction: column; }
+    /* Mobile-first: off-canvas hidden */
+    .sidebar { padding: 12px; display: flex; flex-direction: column; position: fixed; top: 56px; left: 0; height: calc(100dvh - 56px); width: 84vw; max-width: 340px; z-index: 50; transform: translateX(-100%); transition: transform .2s ease; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+    html[data-drawer-open] .sidebar { transform: translateX(0); }
     .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; }
     .gem { width:30px; height:30px; display:grid; place-items:center; border-radius:10px; background: var(--brand); box-shadow: 0 6px 18px var(--ring); }
     nav { margin-top: 20px; display:flex; flex-direction:column; gap:8px; }
-    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; color:#b9c4df; border:1px solid transparent; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; color:#c7d2ee; border:1px solid transparent; }
     .nav-item[aria-current="page"], .nav-item:hover { background: var(--card-grad-1); border-color: rgba(255,255,255,.06); color: var(--text); }
+    .nav-item:focus-visible { outline: 2px solid #9bd5ff; outline-offset: 2px; }
     .icon { width:22px; text-align:center; }
     .footer { margin-top:auto; display:flex; flex-direction:column; gap:12px; }
     .badge { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background: linear-gradient(135deg, #0e1a26, #0b111b); border:1px solid rgba(255,255,255,.05); }
@@ -54,6 +57,10 @@ const nav = [
     .avatar { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; background:#192338; font-weight:700; }
     .u-name { font-size:.9rem; font-weight:600; }
     .u-sub { font-size:.75rem; color: var(--muted); }
+    /* Tablet & up: static sticky sidebar via container width */
+    @container layout (min-width: 40rem) {
+      .sidebar { position: sticky; top: 14px; transform: none; width: auto; height: auto; padding: 18px; }
+      nav { margin-top: 20px; flex-direction: column; overflow: visible; gap: 8px; }
+    }
   </style>
 </aside>
-

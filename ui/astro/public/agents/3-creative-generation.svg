@@ -1,0 +1,26 @@
+<svg width="640" height="360" viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a0f2e"/>
+      <stop offset="1" stop-color="#0a0f1e"/>
+    </linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6ad5"/>
+      <stop offset="1" stop-color="#7b61ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="16" fill="url(#bg)"/>
+  <!-- Anime-like artist with brush -->
+  <g transform="translate(130,56)">
+    <circle cx="156" cy="116" r="56" fill="#2a1438" stroke="#ff6ad5" stroke-opacity=".35"/>
+    <path d="M124 172c-12 18-36 28-36 50 0 24 36 38 68 38s68-14 68-38c0-22-24-32-36-50" fill="#150f22" stroke="#ff6ad5" stroke-opacity=".25"/>
+    <path d="M114 110c18-8 26-30 40-30 16 0 20 16 34 22-8 10-30 16-50 16-12 0-18-2-24-8z" fill="#3a1a4e"/>
+    <!-- Brush -->
+    <path d="M230 98l74-22-52 56-22-34z" fill="#ffd1f1" stroke="#ff6ad5"/>
+  </g>
+  <!-- Paint blobs -->
+  <circle cx="80" cy="280" r="14" fill="url(#p)" opacity=".8"/>
+  <circle cx="130" cy="300" r="10" fill="url(#p)" opacity=".6"/>
+  <circle cx="110" cy="260" r="8" fill="url(#p)" opacity=".7"/>
+</svg>
+

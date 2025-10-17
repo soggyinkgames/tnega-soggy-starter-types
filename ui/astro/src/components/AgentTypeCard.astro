@@ -5,32 +5,53 @@ interface Props {
   description: string;
   emoji: string;
   accent?: string; // css color
+  image?: string; // public path
 }
-const { title, slug, description, emoji, accent = '#7b61ff' } = Astro.props as Props;
+const { title, slug, description, emoji, accent = '#7b61ff', image } = Astro.props as Props;
 ---
-<a href={`/agents/${slug}/new`} class="card">
-  <div class="thumb" style={`--accent:${accent}` as any}>
-    <div class="emoji">{emoji}</div>
-  </div>
-  <div class="meta">
-    <div class="title">{title}</div>
-    <div class="desc">{description}</div>
-  </div>
-  <div class="cta">Create</div>
+<a href={`/agents/${slug}/new`} class="card-hero" style={`--accent:${accent}` as any}>
+  <figure class="art">
+    {image ? (
+      <img src={image} alt={title} loading="lazy" />
+    ) : (
+      <div class="emoji">{emoji}</div>
+    )}
+    <figcaption class="overlay">
+      <div class="title">{title}</div>
+      <div class="desc">{description}</div>
+      <span class="pill">Create</span>
+    </figcaption>
+  </figure>
 </a>
 <style>
-  .card { position:relative; display:grid; grid-template-columns: 100px 1fr auto; gap:14px; align-items:center; padding:14px; border-radius:16px; background: var(--card-grad-1); border:1px solid rgba(255,255,255,.06); transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-  .card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.12); box-shadow: 0 12px 30px rgba(0,0,0,.4); }
-  .thumb { height:72px; border-radius:12px; background: radial-gradient(40px 40px at 70% 20%, color-mix(in oklab, var(--text) 20%, transparent), transparent),
-                     linear-gradient(135deg, color-mix(in oklab, var(--text) 8%, transparent), rgba(255,255,255,.02)),
-                     linear-gradient(135deg, var(--panel), #0b0f16);
-           border:1px solid rgba(255,255,255,.06); display:grid; place-items:center; position:relative; }
-  .thumb::after { content:''; position:absolute; inset:-1px; border-radius:12px; border:1px solid color-mix(in oklab, var(--text) 8%, transparent); pointer-events:none; }
-  .emoji { font-size:34px; filter: drop-shadow(0 6px 18px color-mix(in oklab, var(--text) 30%, transparent)); }
-  .meta .title { font-weight:700; font-size:1.05rem; }
-  .meta .desc { color: var(--muted); font-size:.85rem; margin-top:4px; }
-  .cta { padding:8px 12px; border-radius:12px; background: linear-gradient(135deg, var(--accent), #22d3ee); border:1px solid rgba(255,255,255,.12); font-weight:700; }
-  .card { --accent: {accent}; }
-  @media (max-width: 600px) { .card { grid-template-columns: 70px 1fr; } .cta { grid-column: 1 / -1; justify-self:end; } }
-</style>
+  .card-hero { position: relative; display: block; border-radius: 18px; overflow: clip; background: var(--card-grad-1); border: 1px solid rgba(255,255,255,.08); box-shadow: 0 8px 24px rgba(0,0,0,.45); transform-style: preserve-3d; perspective: 1200px; isolation: isolate; }
+  .card-hero::before { content: ""; position: absolute; inset: -40%; background: radial-gradient(40% 40% at 50% 10%, color-mix(in oklab, var(--accent, #7b61ff) 30%, transparent), transparent 60%); filter: blur(30px); opacity: .35; transition: opacity .25s ease; pointer-events: none; }
+  .card-hero:hover::before { opacity: .6; }
 
+  .art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 16px; display: grid; place-items: end; }
+  .art img, .art .emoji { width: 120%; height: 120%; object-fit: cover; transform: translateZ(0) scale(1.08); filter: saturate(1.2) contrast(1.08) drop-shadow(0 18px 40px rgba(0,0,0,.55)); transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s cubic-bezier(.2,.8,.2,1); }
+  .card-hero:hover .art img { transform: translateZ(40px) scale(1.22) translateY(-6px) rotateZ(-1.2deg); filter: saturate(1.35) contrast(1.1) drop-shadow(0 28px 60px rgba(0,0,0,.6)); }
+  .emoji { display:grid; place-items:center; font-size: 64px; }
+
+  .overlay { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 14px 16px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.65) 100%); display: grid; gap: 4px; }
+  .overlay .title { font-weight: 800; letter-spacing: .5px; font-size: clamp(1rem, 0.9rem + 1cqi, 1.4rem); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+  .overlay .desc { color: #cbd3ef; font-size: clamp(.8rem, .75rem + .6cqi, .95rem); opacity: .95; }
+  .pill { margin-top: 6px; justify-self: end; padding: 8px 12px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #22d3ee); border:1px solid rgba(255,255,255,.18); font-weight: 800; color: #081018; box-shadow: 0 10px 26px color-mix(in oklab, var(--accent, #7b61ff) 35%, transparent); transform: translateZ(60px); }
+
+  /* Exaggerated hover: tilt, lift, glare */
+  .card-hero:hover { transform: translateY(-8px) scale(1.04) rotateX(3deg) rotateY(-3deg); box-shadow: 0 24px 60px rgba(0,0,0,.65); border-color: rgba(255,255,255,.18); }
+  .card-hero::after { content:""; position:absolute; inset:0; background: linear-gradient(120deg, rgba(255,255,255,.0) 30%, rgba(255,255,255,.24) 45%, rgba(255,255,255,.0) 60%); transform: translateX(-120%); transition: transform .6s cubic-bezier(.2,.8,.2,1); mix-blend-mode: overlay; pointer-events:none; }
+  .card-hero:hover::after { transform: translateX(120%); }
+
+  /* Mobile adjustments */
+  @media (max-width: 640px) {
+    .art { aspect-ratio: 16 / 10; }
+    .overlay { padding: 10px 12px; }
+    .pill { padding: 6px 10px; border-radius: 10px; font-weight: 700; }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .card-hero, .card-hero::after, .card-hero::before, .art img { transition: none !important; animation: none !important; transform: none !important; }
+  }
+</style>
