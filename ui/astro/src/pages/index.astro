@@ -43,7 +43,7 @@ import { agentTypes } from "../data/agentTypes";
     .section-title { font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#b9c4df; font-size:.9rem; margin-bottom:12px; }
     .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     /* Container-driven card columns */
-    @container layout (min-width: 40rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap:14px; } .main { gap: 18px; } .section { padding:16px; } }
-    @container layout (min-width: 64rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @container layout (min-width: 40rem) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap:14px; } .main { gap: 18px; } .section { padding:16px; } }
+    @container layout (min-width: 64rem) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   </style>
 </BaseLayout>

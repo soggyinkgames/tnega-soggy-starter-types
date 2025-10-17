@@ -28,12 +28,12 @@ const { title, slug, description, emoji, accent = '#7b61ff', image } = Astro.pro
   .card-hero::before { content: ""; position: absolute; inset: -40%; background: radial-gradient(40% 40% at 50% 10%, color-mix(in oklab, var(--accent, #7b61ff) 30%, transparent), transparent 60%); filter: blur(30px); opacity: .35; transition: opacity .25s ease; pointer-events: none; }
   .card-hero:hover::before { opacity: .6; }
 
-  .art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 16px; display: grid; place-items: end; }
-  .art img, .art .emoji { width: 120%; height: 120%; object-fit: cover; transform: translateZ(0) scale(1.08); filter: saturate(1.2) contrast(1.08) drop-shadow(0 18px 40px rgba(0,0,0,.55)); transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s cubic-bezier(.2,.8,.2,1); }
-  .card-hero:hover .art img { transform: translateZ(40px) scale(1.22) translateY(-6px) rotateZ(-1.2deg); filter: saturate(1.35) contrast(1.1) drop-shadow(0 28px 60px rgba(0,0,0,.6)); }
+  .art { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 16px; display: grid; place-items: end; }
+  .art img, .art .emoji { width: 120%; height: 120%; object-fit: cover; transform: translateZ(0) scale(1.08) translate(var(--tx,0px), var(--ty,0px)) rotateZ(var(--r, 0deg)); filter: saturate(1.2) contrast(1.08) drop-shadow(0 18px 40px rgba(0,0,0,.55)); transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+  .card-hero:hover .art img { transform: translateZ(40px) scale(1.22) translate(calc(var(--tx,0px) * 1.2), calc(var(--ty,0px) * 1.2)) rotateZ(calc(-1.2deg + var(--r,0deg))); filter: saturate(1.35) contrast(1.1) drop-shadow(0 28px 60px rgba(0,0,0,.6)); }
   .emoji { display:grid; place-items:center; font-size: 64px; }
 
-  .overlay { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 14px 16px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.65) 100%); display: grid; gap: 4px; }
+  .overlay { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 14px 16px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.65) 100%); display: grid; gap: 4px; transition: transform .25s ease; will-change: transform; }
   .overlay .title { font-weight: 800; letter-spacing: .5px; font-size: clamp(1rem, 0.9rem + 1cqi, 1.4rem); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
   .overlay .desc { color: #cbd3ef; font-size: clamp(.8rem, .75rem + .6cqi, .95rem); opacity: .95; }
   .pill { margin-top: 6px; justify-self: end; padding: 8px 12px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #22d3ee); border:1px solid rgba(255,255,255,.18); font-weight: 800; color: #081018; box-shadow: 0 10px 26px color-mix(in oklab, var(--accent, #7b61ff) 35%, transparent); transform: translateZ(60px); }
@@ -45,7 +45,6 @@ const { title, slug, description, emoji, accent = '#7b61ff', image } = Astro.pro
 
   /* Mobile adjustments */
   @media (max-width: 640px) {
-    .art { aspect-ratio: 16 / 10; }
     .overlay { padding: 10px 12px; }
     .pill { padding: 6px 10px; border-radius: 10px; font-weight: 700; }
   }
@@ -55,3 +54,36 @@ const { title, slug, description, emoji, accent = '#7b61ff', image } = Astro.pro
     .card-hero, .card-hero::after, .card-hero::before, .art img { transition: none !important; animation: none !important; transform: none !important; }
   }
 </style>
+
+<script>
+  // Exaggerated 3D parallax for desktop pointers; respects reduced motion
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) {
+    const cards = document.querySelectorAll('.card-hero');
+    cards.forEach((card) => {
+      const overlay = card.querySelector('.overlay');
+      let rect;
+      function onMove(e) {
+        rect = rect || card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;  // 0..1
+        const y = (e.clientY - rect.top) / rect.height;  // 0..1
+        const mx = (x - 0.5) * 2; // -1..1
+        const my = (y - 0.5) * 2; // -1..1
+        // Exaggerated deltas
+        card.style.setProperty('--tx', `${mx * 14}px`);
+        card.style.setProperty('--ty', `${my * -10}px`);
+        card.style.setProperty('--r', `${mx * -2}deg`);
+        if (overlay) overlay.style.transform = `translate(${mx * -6}px, ${my * -4}px)`;
+      }
+      function onLeave() {
+        rect = undefined;
+        card.style.removeProperty('--tx');
+        card.style.removeProperty('--ty');
+        card.style.removeProperty('--r');
+        if (overlay) overlay.style.transform = '';
+      }
+      card.addEventListener('pointermove', onMove);
+      card.addEventListener('pointerleave', onLeave);
+    });
+  }
+</script>
