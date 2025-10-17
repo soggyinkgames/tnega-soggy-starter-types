@@ -84,16 +84,10 @@ const { title = 'Soggy Agents' } = Astro.props as Props;
       const scrim = document.querySelector('.scrim');
       const sidebar = document.getElementById('app-sidebar');
       const app = document.querySelector('.app');
-      const mq = window.matchMedia('(max-width: 640px)');
-
-      function applyAriaForViewport() {
+      function applyAria() {
         if (!sidebar) return;
-        if (mq.matches) {
-          const open = html.hasAttribute('data-drawer-open');
-          sidebar.setAttribute('aria-hidden', String(!open));
-        } else {
-          sidebar.removeAttribute('aria-hidden');
-        }
+        const open = html.hasAttribute('data-drawer-open');
+        sidebar.setAttribute('aria-hidden', String(!open));
       }
 
       function setOpen(open) {
@@ -104,19 +98,18 @@ const { title = 'Soggy Agents' } = Astro.props as Props;
         if (app) {
           if (open) app.setAttribute('inert',''); else app.removeAttribute('inert');
         }
-        applyAriaForViewport();
+        applyAria();
         if (open) { sidebar.focus(); } else { btn.focus(); }
       }
 
       btn && btn.addEventListener('click', () => setOpen(!html.hasAttribute('data-drawer-open')));
       scrim && scrim.addEventListener('click', () => setOpen(false));
       window.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
-      mq.addEventListener('change', applyAriaForViewport);
-      applyAriaForViewport();
+      applyAria();
     </script>
   </body>
   <style>
-    /* Mobile header (visible by default) */
+    /* Mobile header (visible on all devices for toggling sidebar) */
     .m-header { display:flex; position:sticky; top:0; z-index:40; backdrop-filter: blur(8px); background: linear-gradient(180deg, rgba(11,15,22,.9), rgba(11,15,22,.6)); border-bottom: 1px solid rgba(255,255,255,.06); padding: 10px 12px; align-items:center; gap:10px; }
     .m-header .brand { display:flex; align-items:center; gap:8px; }
     .m-header .gem { width:26px; height:26px; display:grid; place-items:center; border-radius:8px; background: var(--brand); box-shadow: 0 4px 14px var(--ring); }
@@ -129,13 +122,12 @@ const { title = 'Soggy Agents' } = Astro.props as Props;
     .burger .label { position:absolute; left:-9999px; }
     .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 30; }
     html:not([data-drawer-open]) .scrim { display:none; }
-    /* Container queries: grow columns relative to the shell width */
+    /* Container queries: main + right columns; sidebar is overlay and does not consume a column */
     @container layout (min-width: 40rem) {
-      .m-header { display:none; }
-      .app { grid-template-columns: clamp(200px, 22cqi, 240px) minmax(0,1fr); gap: clamp(12px, 2cqi, 16px); padding: clamp(12px, 2cqi, 16px); }
+      .app { grid-template-columns: minmax(0,1fr) clamp(300px, 28cqi, 360px); gap: clamp(12px, 2cqi, 16px); padding: clamp(12px, 2cqi, 16px); }
     }
     @container layout (min-width: 64rem) {
-      .app { grid-template-columns: clamp(220px, 22cqi, 260px) minmax(0,1fr) clamp(300px, 28cqi, 360px); gap: clamp(16px, 3cqi, 22px); padding: clamp(16px, 3cqi, 22px); }
+      .app { grid-template-columns: minmax(0,1fr) clamp(320px, 28cqi, 380px); gap: clamp(16px, 3cqi, 22px); padding: clamp(16px, 3cqi, 22px); }
     }
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }

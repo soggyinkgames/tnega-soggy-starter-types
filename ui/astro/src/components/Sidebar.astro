@@ -57,10 +57,6 @@ const nav = [
     .avatar { width:28px; height:28px; border-radius:8px; display:grid; place-items:center; background:#192338; font-weight:700; }
     .u-name { font-size:.9rem; font-weight:600; }
     .u-sub { font-size:.75rem; color: var(--muted); }
-    /* Tablet & up: static sticky sidebar via container width */
-    @container layout (min-width: 40rem) {
-      .sidebar { position: sticky; top: 14px; transform: none; width: auto; height: auto; padding: 18px; }
-      nav { margin-top: 20px; flex-direction: column; overflow: visible; gap: 8px; }
-    }
+    /* Sidebar remains off-canvas on all devices; opened via burger toggle */
   </style>
 </aside>
