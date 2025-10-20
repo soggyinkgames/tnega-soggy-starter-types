@@ -29,8 +29,8 @@ const { title, slug, description, emoji, accent = '#7b61ff', image } = Astro.pro
   .card-hero:hover::before { opacity: .6; }
 
   .art { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 16px; display: grid; place-items: end; }
-  .art img, .art .emoji { width: 120%; height: 120%; object-fit: cover; transform: translateZ(0) scale(1.08) translate(var(--tx,0px), var(--ty,0px)) rotateZ(var(--r, 0deg)); filter: saturate(1.2) contrast(1.08) drop-shadow(0 18px 40px rgba(0,0,0,.55)); transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s cubic-bezier(.2,.8,.2,1); will-change: transform; }
-  .card-hero:hover .art img { transform: translateZ(40px) scale(1.22) translate(calc(var(--tx,0px) * 1.2), calc(var(--ty,0px) * 1.2)) rotateZ(calc(-1.2deg + var(--r,0deg))); filter: saturate(1.35) contrast(1.1) drop-shadow(0 28px 60px rgba(0,0,0,.6)); }
+  .art img, .art .emoji { width: 120%; height: 120%; object-fit: cover; transform: translateZ(0) scale(1.08) translate(var(--tx,0px), var(--ty,0px)) rotateZ(var(--r, 0deg)); filter: saturate(1.2) contrast(1.08) drop-shadow(0 18px 10px rgba(0,0,0,.55)); transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s cubic-bezier(.2,.8,.2,1); will-change: transform; }
+  .card-hero:hover .art img { transform: translateZ(10px) scale(1.22) translate(calc(var(--tx,0px) * 1.2), calc(var(--ty,0px) * 1.2)) rotateZ(calc(-1.2deg + var(--r,0deg))); filter: saturate(1.35) contrast(1.1) drop-shadow(0 28px 60px rgba(0,0,0,.6)); }
   .emoji { display:grid; place-items:center; font-size: 64px; }
 
   .overlay { position: absolute; inset-inline: 0; inset-block-end: 0; padding: 14px 16px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.65) 100%); display: grid; gap: 4px; transition: transform .25s ease; will-change: transform; }

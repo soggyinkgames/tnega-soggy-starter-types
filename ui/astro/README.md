@@ -1,4 +1,4 @@
-Soggy Agents Dashboard (Astro)
+Soggy Starter Agents Dashboard (Astro)
 
 Overview
 - Astro + TypeScript dashboard inspired by the Valorant UI reference.
