@@ -3,10 +3,12 @@ interface Props {
   title: string;
   subtitle?: string;
   stat?: string;
+  image?: string; // public path to svg/png
 }
-const { title, subtitle = 'Play Time 463h', stat = '62%' } = Astro.props as Props;
+const { title, subtitle = 'Play Time 463h', stat = '62%', image } = Astro.props as Props;
 ---
-<section class="panel hero">
+<section class="panel hero" style={image ? (`--bg-image: url('${image}')`) as any : undefined}>
+  {image && <div class="hero-art" aria-hidden="true" />}
   <div class="left">
     <div class="eyebrow">Top Agent Type</div>
     <h2>{title}</h2>
@@ -23,6 +25,7 @@ const { title, subtitle = 'Play Time 463h', stat = '62%' } = Astro.props as Prop
   </div>
   <style>
     .hero { position: relative; overflow:hidden; display:grid; grid-template-columns: 1fr auto; padding: 22px; background: radial-gradient(600px 300px at 70% 0%, rgba(124, 93, 250, .20), transparent 60%), linear-gradient(135deg, #1f2040, #101424 70%); }
+    .hero-art { position:absolute; inset:0; background-image: var(--bg-image); background-position: center right 10%; background-repeat: no-repeat; background-size: contain; opacity: 0.18; transform: translateZ(0); pointer-events:none; }
     .left { display:flex; flex-direction:column; gap:10px; }
     .eyebrow { color:#b8baf7; font-weight:700; letter-spacing:1px; text-transform:uppercase; font-size:.75rem; }
     h2 { margin:0; font-size:28px; }

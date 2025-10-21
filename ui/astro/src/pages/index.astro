@@ -18,7 +18,7 @@ import { agentTypes } from "../data/agentTypes";
       </div>
     </div>
 
-    <TopAgent title="Knowledge Insight" />
+    <TopAgent title="Knowledge Insight" image={(agentTypes.find(a => a.title === 'Knowledge Insight')?.image) ?? '/agents/1-knowledge-insight.svg'} />
 
     <section class="panel section">
       <div class="section-title">Agents</div>
