@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { defineAgent } from "@lib/agent"; // uses tsconfig alias
 import { queryKnowledgeBase, type Match } from "./tools"; // note: .js for NodeNext
+import config from "./config";
+import { runEvalsAndStore } from "@lib/runEvals";
 
 const inputSchema = z.object({
     query: z.string().min(1),
@@ -31,10 +33,18 @@ export const knowledgeAgent = defineAgent({
             ],
         });
 
-        return {
+        const output = {
             answer: res.output_text,
             sources: matches.map((m: Match) => ({ id: m.id, similarity: m.similarity })),
             usage: res.usage,
         };
+        const evals = await runEvalsAndStore(
+            (config as any),
+            (config as any).memory ?? {},
+            query,
+            output.answer ?? "",
+        );
+
+        return { ...output, evals };
     },
 });
