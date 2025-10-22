@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@lib/supabase";
 
 export type Match = {
     id: string;
@@ -7,10 +7,7 @@ export type Match = {
     similarity: number;
 };
 
-const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Use shared server-side Supabase client
 
 export async function queryKnowledgeBase({
     query,

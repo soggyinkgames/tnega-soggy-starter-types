@@ -1,12 +1,18 @@
 import { z } from "zod";
 
+/** Generic agent type */
 export type Agent<TIn, TOut> = {
+    /** Internal name for the agent */
     name: string;
+    /** Optional description for dashboards */
     description?: string;
+    /** Input schema (Zod ensures runtime + TS validation) */
     input: z.ZodType<TIn>;
+    /** Execution method */
     run: (input: TIn) => Promise<TOut>;
 };
 
-export function defineAgent<TIn, TOut>(cfg: Agent<TIn, TOut>) {
-    return cfg; // simple identity wrapper for consistency/autocomplete
+/** Helper to define strongly typed agents */
+export function defineAgent<TIn, TOut>(cfg: Agent<TIn, TOut>): Agent<TIn, TOut> {
+    return cfg;
 }
