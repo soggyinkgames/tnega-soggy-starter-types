@@ -28,7 +28,7 @@ async function main() {
 
     const baseDir = path.resolve("agents", name);
     if (fs.existsSync(baseDir)) {
-        console.error(`Agent ${name} already exists.`);
+        console.error(`❌ Agent ${name} already exists.`);
         process.exit(1);
     }
 
@@ -93,7 +93,7 @@ async function main() {
         console.log(`[new-agent] No config.ts found. Default evals for ${agentTypeId} would be: [${defaults.join(", ")}]`);
     }
 
-    console.log(`Created new agent '${name}' of type ${typeNum} (${typeName})`);
+    console.log(`✅ Created new agent '${name}' of type ${typeNum} (${typeName})`);
 }
 
 function toTitle(str: string) {
