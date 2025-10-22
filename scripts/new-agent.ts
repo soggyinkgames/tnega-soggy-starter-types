@@ -2,6 +2,7 @@
 import fs from "fs-extra";
 import path from "path";
 import prompts from "prompts";
+import { DEFAULT_EVALS } from "@lib/defaultEvals";
 
 // Narrow the keys and values using `as const`
 const typeMap = {
@@ -27,7 +28,7 @@ async function main() {
 
     const baseDir = path.resolve("agents", name);
     if (fs.existsSync(baseDir)) {
-        console.error(`❌ Agent ${name} already exists.`);
+        console.error(`Agent ${name} already exists.`);
         process.exit(1);
     }
 
@@ -66,7 +67,33 @@ async function main() {
         fs.writeFileSync(p, replaced);
     }
 
-    console.log(`✅ Created new agent '${name}' of type ${typeNum} (${typeName})`);
+    // Apply default evals if missing in generated config.ts
+    const agentTypeId = `${typeNum}-${typeName}`;
+    const configPath = path.join(baseDir, "config.ts");
+    if (fs.existsSync(configPath)) {
+        const cfg = fs.readFileSync(configPath, "utf8");
+        const hasEvals = /\bevals\s*:\s*\[/.test(cfg);
+        if (!hasEvals) {
+            const defaults = DEFAULT_EVALS[agentTypeId] || [];
+            let updated = cfg;
+            if (/\bdeploy\s*:\s*/.test(updated) && /\bllm\s*:\s*/.test(updated)) {
+                // insert after llm line for readability
+                updated = updated.replace(/(\bllm\s*:\s*[^\n]*\n)/, `$1    evals: [${defaults.map((e) => `\"${e}\"`).join(", ")}],\n`);
+            } else {
+                // fallback: append before closing brace
+                updated = updated.replace(/};\s*$/, `    evals: [${defaults.map((e) => `\"${e}\"`).join(", ")}],\n};`);
+            }
+            fs.writeFileSync(configPath, updated);
+            console.log(`[new-agent] Applied default evals for ${agentTypeId}: [${defaults.join(", ")}]`);
+        } else {
+            console.log(`[new-agent] Using evals defined in template for ${agentTypeId}.`);
+        }
+    } else {
+        const defaults = DEFAULT_EVALS[agentTypeId] || [];
+        console.log(`[new-agent] No config.ts found. Default evals for ${agentTypeId} would be: [${defaults.join(", ")}]`);
+    }
+
+    console.log(`Created new agent '${name}' of type ${typeNum} (${typeName})`);
 }
 
 function toTitle(str: string) {
@@ -80,3 +107,4 @@ main().catch((err) => {
     console.error(err);
     process.exit(1);
 });
+
