@@ -1,0 +1,50 @@
+name: build_dynamic_widget_registry
+description: >
+  Add a typed, discoverable widget registry to the Soggy Starters UI package.
+  This registry allows Boss (and agents) to dynamically switch widgets at runtime
+  by key. Each widget registers a loader, title, and optional prop resolver.
+  Boss should lazy-load widgets from the registry using Suspense.
+
+instructions: |
+  -----------------------
+  📁 Folder Structure
+  -----------------------
+  /ui/
+   ├─ boss/
+   │   └─ index.tsx
+   ├─ widgets/
+   │   ├─ spaced-repetition-cards/
+   │   │   └─ index.tsx
+   │   ├─ dashboard/
+   │   │   └─ index.tsx
+   │   ├─ registry.ts
+   │   └─ types.ts
+
+  -----------------------
+  ⚙️ Define widget types
+  -----------------------
+  File: /ui/widgets/types.ts
+  ```ts
+  import type { ComponentType } from "react";
+
+  // Keys used to register widgets
+  export type WidgetKey =
+    | "spaced-repetition-cards"
+    | "dashboard"
+    | "analytics"
+    | "notes";
+
+  // Base props available to all widgets
+  export interface WidgetPropsBase {
+    onAction?: (type: string, payload?: any) => void;
+    agent?: any;
+    theme?: "dark" | "light";
+  }
+
+  // Widget registration contract
+  export interface WidgetContract<P = any> {
+    key: WidgetKey;
+    title: string;
+    loader: () => Promise<{ default: ComponentType<P> }>;
+    getProps?: (ctx: any) => P;
+  }

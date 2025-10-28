@@ -1,0 +1,52 @@
+name: build_dynamic_widget_registry_no_dashboard
+description: >
+  Implement a clean, type-safe widget registry and dynamic loader for Soggy Starters UI.
+  The registry allows the Boss app to dynamically switch widgets (micro-UIs) based on
+  agent context or user flow. The dashboard is NOT part of this system — it remains a
+  separate top-level interface used by agents and must NOT be registered as a widget.
+
+instructions: |
+  -----------------------
+  📁 Folder Structure
+  -----------------------
+  /ui/
+   ├─ boss/
+   │   ├─ index.tsx
+   │   ├─ useBoss.ts
+   ├─ widgets/
+   │   ├─ spaced-repetition-cards/
+   │   │   └─ index.tsx
+   │   ├─ notes/
+   │   │   └─ index.tsx
+   │   ├─ analytics/
+   │   │   └─ index.tsx
+   │   ├─ registry.ts
+   │   ├─ selectWidget.ts
+   │   └─ types.ts
+   ├─ dashboard/                  # separate system; NOT included in registry
+   │   └─ index.tsx
+
+  -----------------------
+  ⚙️ Define Widget Types
+  -----------------------
+  File: /ui/widgets/types.ts
+  ```ts
+  import type { ComponentType } from "react";
+
+  export type WidgetKey =
+    | "spaced-repetition-cards"
+    | "notes"
+    | "analytics";
+
+  export interface WidgetPropsBase {
+    onAction?: (type: string, payload?: any) => void;
+    theme?: "dark" | "light";
+    agent?: any;
+  }
+
+  export interface WidgetContract<P = any> {
+    key: WidgetKey;
+    title: string;
+    loader: () => Promise<{ default: ComponentType<P> }>;
+    getProps?: (ctx: any) => P;
+  }

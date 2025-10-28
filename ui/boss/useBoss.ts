@@ -17,4 +17,3 @@ export function useBoss(initialWidget: BossWidgetKey = "spaced-repetition-cards"
 
   return { activeWidget, setActiveWidget, loading, handleRunAgent }
 }
-

@@ -4,6 +4,8 @@ import { Settings, Sparkles } from "lucide-react"
 import { useBoss } from "./useBoss"
 import type { BossWidgetKey } from "./types"
 import "./styles.css"
+import { getWidget } from "../widgets/registry"
+import type { WidgetKey } from "../widgets/types"
 
 // Demo data to feed the default widget
 const demoCards = [
@@ -17,27 +19,9 @@ export default function Boss() {
     "spaced-repetition-cards" satisfies BossWidgetKey
   )
 
-  const DynamicWidget = useMemo(() => {
-    // Dynamic mount of active widget; default export required
-    // Vite/Webpack hint: allow variable path
-    // @ts-ignore - bundlers may need magic comments to allow dynamic path
-    const loader = () => import(/* @vite-ignore */ `../widgets/${activeWidget}`)
-    return React.lazy(loader)
-  }, [activeWidget])
-
-  // Props routing by widget key; future widgets can be added here
-  const widgetProps = useMemo(() => {
-    if (activeWidget === "spaced-repetition-cards") {
-      return {
-        title: "your notes",
-        cards: demoCards,
-        onReviewComplete: (r: { correct: number; total: number }) => {
-          console.log("Review complete:", r)
-        },
-      }
-    }
-    return {}
-  }, [activeWidget]) as any
+  const contract = useMemo(() => getWidget(activeWidget as WidgetKey), [activeWidget])
+  const DynamicWidget = useMemo(() => React.lazy(contract.loader), [contract])
+  const widgetProps = useMemo(() => contract.getProps?.({ cards: demoCards }) ?? {}, [contract]) as any
 
   return (
     <div className="h-screen w-full flex flex-col boss-bg text-white relative overflow-hidden">
@@ -56,7 +40,7 @@ export default function Boss() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="w-full max-w-xs rounded-2xl shadow-2xl glass-card inner-glow p-4"
+          className="w-full max-w-sm rounded-2xl shadow-2xl glass-card inner-glow p-4"
         >
           <Suspense
             fallback={
