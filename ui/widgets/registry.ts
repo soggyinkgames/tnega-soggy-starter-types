@@ -14,7 +14,7 @@ const contracts: Record<WidgetKey, WidgetContract<any>> = {
     loader: () => modules["./spaced-repetition-cards/index.tsx"]!(),
     getProps: (ctx: any) =>
       ctx?.spacedRepetitionProps ?? {
-        title: "Quick Review",
+        title: "Your Notes",
         cards: (
           ctx?.cards ?? [
             { id: "1", front: "What is prototyping for?", back: "To answer design questions." },
