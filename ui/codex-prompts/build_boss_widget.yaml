@@ -1,0 +1,26 @@
+name: build_boss_widget
+description: >
+  Create a responsive, mobile-first "Boss" widget that serves as the main
+  command and prompt interface for Soggy Starters. It acts as the central
+  controller where users can issue prompts, generate outputs, and switch
+  between connected widgets such as spaced repetition cards, dashboards,
+  or analytics.
+
+instructions: |
+  Build the following structure inside /ui/widgets/boss:
+
+  /ui/widgets/boss/
+   ├─ index.tsx              # main Boss widget entry
+   ├─ useBoss.ts             # hook for managing state, input, and widget switching
+   ├─ styles.css             # layout and animations
+   ├─ types.ts               # optional shared types
+
+  -----------------------
+  🧭 Purpose
+  -----------------------
+  The Boss widget is the "home base" for users.
+  It must:
+  - Display a top title bar or app name (e.g. "Soggy Starters").
+  - Include a text area or input field for prompt entry.
+  - Include a "Send" button (or paper plane icon) to submit prompts.
+ 

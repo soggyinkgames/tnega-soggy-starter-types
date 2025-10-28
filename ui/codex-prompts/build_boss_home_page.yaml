@@ -1,0 +1,109 @@
+name: build_boss_home_page
+description: >
+  Create the main mobile-first "Boss" home page for the Soggy Starters UI.
+  This page serves as the root controller and layout container for the app.
+  It should manage the user’s current prompt, handle responses from agents,
+  and dynamically render selected widgets (e.g. spaced-repetition-cards,
+  dashboard, analytics). The design must be phone-first, clean, and minimal.
+
+instructions: |
+  Build the following structure:
+
+  /ui/
+   ├─ boss/
+   │   ├─ index.tsx           # main page component
+   │   ├─ useBoss.ts          # hook for prompt + widget state management
+   │   ├─ types.ts            # shared types
+   │   └─ styles.css          # local styles
+   └─ widgets/
+       └─ ...                 # optional sub-widgets rendered by Boss
+
+  -----------------------
+  📱 Layout Requirements
+  -----------------------
+  - Mobile-first flex column layout, dark background.
+  - Top app bar with title “Soggy Starters”.
+  - Center input section (multi-line prompt box).
+  - A “Run” / “Send” button (paper-plane icon) to trigger an agent prompt.
+  - Below the input, a scrollable area for displaying active widget(s).
+  - Each widget (spaced-repetition-cards, dashboard, etc.) is a React component
+    imported dynamically based on current state.
+
+  -----------------------
+  ⚙️ Logic Requirements
+  -----------------------
+  - Maintain internal state:
+      { activeWidget: string | null, prompt: string, output: any }
+  - Include a `useBoss` hook that handles:
+      • updating the prompt text
+      • triggering a fake agent call (mock async function)
+      • mounting a selected widget component dynamically
+  - Use dynamic import (React.lazy + Suspense) for widgets:
+      import(`../widgets/${activeWidget}`)
+  - The Boss should accept optional props:
+      { defaultWidget?: string, defaultPrompt?: string }
+
+  -----------------------
+  🎨 UI Guidelines
+  -----------------------
+  - TailwindCSS styling
+  - Use Lucide icons (Send, LayoutGrid, Book, Sparkles)
+  - Include smooth transitions between widget views
+  - Maintain phone-first proportions (full-height flex layout)
+  - Provide space for bottom nav or floating action buttons later
+
+  -----------------------
+  🧩 Example JSX Flow
+  -----------------------
+  <div className="h-screen flex flex-col bg-neutral-950 text-white p-4">
+    <header className="flex items-center justify-between mb-4">
+      <h1 className="text-lg font-bold">Soggy Starters</h1>
+      <button className="text-neutral-400 hover:text-white">
+        <LayoutGrid size={20} />
+      </button>
+    </header>
+
+    <textarea
+      className="w-full bg-neutral-800 text-white rounded-lg p-3 mb-3 focus:ring-2 focus:ring-indigo-500"
+      placeholder="What do you want to learn or generate today?"
+      value={prompt}
+      onChange={handleChange}
+    />
+
+    <button
+      onClick={handleSend}
+      className="flex items-center justify-center gap-2 bg-indigo-600 text-white font-medium py-2 rounded-lg"
+    >
+      <Send size={16}/> Run
+    </button>
+
+    <main className="flex-1 mt-4 overflow-y-auto">
+      {activeWidget && <DynamicWidget />}
+    </main>
+  </div>
+
+  -----------------------
+  🪄 Behavior
+  -----------------------
+  - When the user presses “Run,” the prompt is sent to a mock agent
+    (simulated async function returning sample data).
+  - Once data arrives, set `activeWidget` to a widget name
+    (e.g. "spaced-repetition-cards") and render it with props.
+  - Widgets receive data via props (prompt output, cards, etc.).
+
+  -----------------------
+  📦 Technologies
+  -----------------------
+  - React 18+
+  - TypeScript
+  - TailwindCSS
+  - Lucide React
+  - Optional: Framer Motion for simple transitions
+
+  -----------------------
+  ✅ Deliverables
+  -----------------------
+  - Fully working /ui/boss page component with prompt input and widget area
+  - Hook (useBoss.ts) handling state and dynamic imports
+  - Styles.css for animations + layout polish
+  - Example integration with spaced-repetition-cards widget

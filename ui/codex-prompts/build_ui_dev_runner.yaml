@@ -1,0 +1,60 @@
+name: build_ui_dev_runner
+description: >
+  Configure the /ui package so that running `npm run dev boss`
+  launches a local Vite development server rendering the Boss page,
+  including its widgets. This prompt ensures React, Tailwind, Framer Motion,
+  and TypeScript are configured correctly and everything runs from /ui.
+
+instructions: |
+  -----------------------
+  📁 Folder Structure
+  -----------------------
+  /ui/
+   ├─ boss/
+   │   ├─ index.tsx
+   │   ├─ useBoss.ts
+   │   └─ styles.css
+   ├─ widgets/
+   │   ├─ spaced-repetition-cards/
+   ├─ styles/
+   │   └─ globals.css
+   ├─ main.tsx
+   ├─ index.html
+   ├─ vite.config.ts
+   ├─ tailwind.config.ts
+   ├─ tsconfig.json
+   └─ package.json
+
+  -----------------------
+  ⚙️ package.json
+  -----------------------
+  Create or update /ui/package.json:
+
+  ```json
+  {
+    "name": "@soggy/ui",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+      "dev": "vite",
+      "dev:boss": "vite --config vite.config.ts",
+      "build": "vite build",
+      "preview": "vite preview"
+    },
+    "dependencies": {
+      "react": "^18.3.0",
+      "react-dom": "^18.3.0",
+      "framer-motion": "^11.0.0",
+      "lucide-react": "^0.356.0",
+      "zustand": "^4.5.0"
+    },
+    "devDependencies": {
+      "vite": "^5.1.0",
+      "@vitejs/plugin-react": "^4.3.1",
+      "typescript": "^5.3.0",
+      "tailwindcss": "^3.4.0",
+      "postcss": "^8.4.31",
+      "autoprefixer": "^10.4.16"
+    }
+  }

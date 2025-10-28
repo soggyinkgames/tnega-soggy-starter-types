@@ -1,0 +1,81 @@
+name: build_spaced_repetition_widget
+description: >
+  Create a responsive, phone-first spaced repetition card widget component
+  for the Soggy Starters UI library. The widget allows users to flip cards,
+  mark recall success/failure, and view progress through a small deck.
+  It must be reusable across apps and styled using TailwindCSS.
+
+instructions: |
+  Build the following component tree inside the /ui/widgets/spaced-repetition-cards folder:
+
+  /ui/widgets/spaced-repetition-cards/
+   ├─ index.tsx                 # main widget entry point
+   ├─ Card.tsx                  # individual card logic (optional abstraction)
+   ├─ useSpacedRepetition.ts    # hook for spaced repetition logic & interval handling
+   ├─ types.ts                  # type definitions
+   ├─ styles.css                # component styles (flip animation, colors, etc.)
+
+  -----------------------
+  📱 Requirements
+  -----------------------
+  - Design: phone-first, minimal, dark-mode base using Tailwind.
+  - Interaction: tap or click flips the card.
+  - Buttons: ✅ Correct / ❌ Incorrect with icons (Lucide).
+  - State: display current index and progress (e.g., 2 / 10).
+  - Animation: smooth 180° flip using Framer Motion.
+  - Output: invoke onReviewComplete({ correct, total }) callback when finished.
+  - All dependencies must be local (React, Tailwind, Framer Motion, Lucide).
+
+  -----------------------
+  ⚙️ Component API
+  -----------------------
+  Props:
+    title?: string               # optional heading (defaults to "Spaced Repetition")
+    cards: CardItem[]            # list of flashcard objects
+    onReviewComplete?: function  # callback fired when the deck is finished
+
+  CardItem type:
+    {
+      id?: string
+      front: string
+      back: string
+      interval?: number
+      lastReviewed?: string
+    }
+
+  -----------------------
+  🧩 Example Usage
+  -----------------------
+  import SpacedRepetitionCards from "@/ui/widgets/spaced-repetition-cards";
+
+  const sample = [
+    { id: "1", front: "What is prototyping for?", back: "To answer design questions." },
+    { id: "2", front: "Define ideation phase.", back: "Setting creative direction." }
+  ];
+
+  export default function App() {
+    return (
+      <SpacedRepetitionCards
+        title="Game Design Concepts"
+        cards={sample}
+        onReviewComplete={(r) => console.log("Results:", r)}
+      />
+    );
+  }
+
+  -----------------------
+  📦 Technologies
+  -----------------------
+  - React 18+
+  - TypeScript
+  - TailwindCSS
+  - Framer Motion
+  - Lucide React
+
+  -----------------------
+  ✅ Deliverables
+  -----------------------
+  - Full working React widget with flip animation and buttons.
+  - Hook logic (`useSpacedRepetition.ts`) ready for future interval algorithms.
+  - CSS for flip effect and card styling.
+  - Code must be self-contained, production-grade, and mobile responsive.

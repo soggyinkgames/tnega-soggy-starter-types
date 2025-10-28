@@ -1,0 +1,128 @@
+name: build_ui_package_environment
+description: >
+  Initialize the Soggy Starters UI package. This package will host all
+  front-end modules — Boss, Dashboard, and Widgets — using React + TypeScript
+  with shared dependencies and consistent design system support (TailwindCSS,
+  Framer Motion, Lucide React, Zustand, etc.). The goal is to enable all UI
+  modules to interoperate and share state, theming, and animation utilities.
+
+instructions: |
+  Create a standalone React + TypeScript workspace package under /ui
+  (e.g. if using a monorepo, it should be imported via @soggy/ui).
+  The package must support sibling folders:
+
+  /ui/
+   ├─ boss/
+   ├─ dashboard/
+   ├─ widgets/
+   │   ├─ spaced-repetition-cards/
+   │   ├─ ...
+   ├─ hooks/
+   ├─ components/
+   ├─ styles/
+   │   └─ globals.css
+   ├─ package.json
+   ├─ tsconfig.json
+   └─ tailwind.config.ts
+
+  -----------------------
+  ⚙️ Environment Setup
+  -----------------------
+  1. Initialize package.json:
+      {
+        "name": "@soggy/ui",
+        "version": "0.1.0",
+        "type": "module",
+        "main": "index.ts",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "lint": "eslint .",
+          "preview": "vite preview"
+        },
+        "dependencies": {
+          "react": "^18.3.0",
+          "react-dom": "^18.3.0",
+          "framer-motion": "^11.0.0",
+          "lucide-react": "^0.356.0",
+          "zustand": "^4.5.0",
+          "clsx": "^2.1.0"
+        },
+        "devDependencies": {
+          "typescript": "^5.3.0",
+          "tailwindcss": "^3.4.0",
+          "postcss": "^8.4.31",
+          "autoprefixer": "^10.4.16",
+          "vite": "^5.1.0",
+          "@types/react": "^18.2.45",
+          "@types/react-dom": "^18.2.18",
+          "eslint": "^8.50.0"
+        }
+      }
+
+  2. tsconfig.json:
+      {
+        "compilerOptions": {
+          "target": "ES2021",
+          "lib": ["DOM", "ES2021"],
+          "jsx": "react-jsx",
+          "module": "ESNext",
+          "moduleResolution": "Node",
+          "esModuleInterop": true,
+          "strict": true,
+          "skipLibCheck": true,
+          "resolveJsonModule": true,
+          "baseUrl": ".",
+          "paths": {
+            "@ui/*": ["./*"]
+          }
+        },
+        "include": ["./**/*.ts", "./**/*.tsx"]
+      }
+
+  3. Tailwind setup:
+      - Add tailwind.config.ts with dark mode, custom colors, and fonts.
+      - Add globals.css to include base, components, utilities.
+      - Add `@tailwind base; @tailwind components; @tailwind utilities;` to globals.css.
+
+  4. Shared hooks in /ui/hooks:
+      - useTheme.ts — manage light/dark or gradient themes.
+      - useAgentState.ts — manage cross-widget agent context.
+
+  5. Shared components in /ui/components:
+      - Card.tsx — reusable rounded glass card container.
+      - Button.tsx — unified styled button component.
+      - IconButton.tsx — for small circular actions (Lucide).
+
+  -----------------------
+  🧩 Design System Rules
+  -----------------------
+  - Default theme: black → indigo gradient background.
+  - Font: Inter, system-ui.
+  - Buttons: rounded-full, bold, bright accent color (#6366f1).
+  - Cards: blurred glass, border-neutral-700, shadow-xl.
+  - Motion: use Framer Motion for all entrance / exit transitions.
+  - Iconography: Lucide React only.
+
+  -----------------------
+  🧱 Example Shared Components
+  -----------------------
+
+  **/ui/components/Card.tsx**
+  ```tsx
+  import React from "react";
+  import { motion } from "framer-motion";
+  import clsx from "clsx";
+
+  export const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={clsx(
+        "rounded-2xl bg-neutral-900/70 border border-neutral-800 shadow-2xl backdrop-blur-md p-4",
+        className
+      )}
+    >
+      {children}
+    </motion.div>
+  );

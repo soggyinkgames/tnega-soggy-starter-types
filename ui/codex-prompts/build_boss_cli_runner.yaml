@@ -1,0 +1,45 @@
+name: build_boss_cli_runner
+description: >
+  Add a CLI entrypoint to run the Boss page and its widgets directly.
+  The command `soggy dev boss` should start a local Vite server that loads
+  /ui/boss/index.tsx as the root React component and supports hot reload.
+
+instructions: |
+  -----------------------
+  📁 Project layout
+  -----------------------
+  /ui/
+   ├─ boss/
+   │   ├─ index.tsx
+   │   ├─ useBoss.ts
+   │   └─ styles.css
+   ├─ widgets/
+   │   └─ spaced-repetition-cards/
+   ├─ styles/
+   │   └─ globals.css
+   ├─ package.json
+   ├─ vite.config.ts
+   └─ tsconfig.json
+  /cli/
+   └─ index.ts (or soggy.ts)
+
+  -----------------------
+  ⚙️ Vite Configuration (ui/vite.config.ts)
+  -----------------------
+  ```ts
+  import { defineConfig } from "vite";
+  import react from "@vitejs/plugin-react";
+  import path from "path";
+
+  export default defineConfig({
+    plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "../"),
+      },
+    },
+    server: {
+      port: 5173,
+      open: true,
+    },
+  });

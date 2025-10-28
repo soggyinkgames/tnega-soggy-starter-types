@@ -1,0 +1,92 @@
+name: build_boss_ui
+description: >
+  Create a sleek, mobile-first home screen called "Boss" for Soggy Starters.
+  The design is inspired by premium card collection apps (see reference image).
+  It serves as the container for widgets like spaced-repetition-cards, rendered
+  within a centered glassy card deck UI.
+
+instructions: |
+  Build the following inside /ui/boss:
+
+  /ui/boss/
+   ├─ index.tsx         # Main page UI
+   ├─ styles.css        # Gradient, glass, shadows
+   ├─ useBoss.ts        # Hook for managing state and widget mounting
+   ├─ types.ts          # Optional
+   └─ assets/           # (optional logo, gradient)
+
+  -----------------------
+  🎨 Design
+  -----------------------
+  - Phone-first layout with dark glossy style.
+  - Background: black to indigo-violet gradient (#000 -> #1a0b47).
+  - Main content: centered card container with rounded corners (2xl),
+    subtle inner glow, and shadow.
+  - The main card displays an active widget (default: spaced-repetition-cards).
+  - Top bar: small logo/title “Soggy Starters”.
+  - Bottom bar: one floating pill button (“Run Agent” or “Generate Cards”).
+  - Typography: Inter, white text, slight blur/glow for premium look.
+
+  -----------------------
+  ⚙️ Behavior
+  -----------------------
+  - useBoss() manages:
+      { activeWidget, setActiveWidget, loading, handleRunAgent }
+  - Default widget: "spaced-repetition-cards"
+  - Widget mounts dynamically: import(`../widgets/${activeWidget}`)
+  - Action button triggers handleRunAgent (mock async for now).
+  - Provide transitions for card entry / exit (Framer Motion fade or slide).
+
+  -----------------------
+  📦 Technologies
+  -----------------------
+  - React 18+
+  - TypeScript
+  - TailwindCSS
+  - Framer Motion
+  - Lucide React (for icons)
+
+  -----------------------
+  💻 Example JSX Structure
+  -----------------------
+  <div className="h-screen w-full flex flex-col bg-gradient-to-b from-black to-indigo-950 text-white relative overflow-hidden">
+    <header className="p-4 flex justify-between items-center text-sm text-neutral-400">
+      <h1 className="font-semibold text-lg">Soggy Starters</h1>
+      <button className="rounded-full bg-neutral-800 p-2">
+        <Settings size={16}/>
+      </button>
+    </header>
+
+    <main className="flex-1 flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-xs bg-neutral-900/70 rounded-2xl shadow-2xl border border-neutral-700 p-4 backdrop-blur-md"
+      >
+        <DynamicWidget />
+      </motion.div>
+    </main>
+
+    <footer className="p-4 flex justify-center">
+      <button className="flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 px-6 rounded-full font-medium shadow-lg">
+        <Sparkles size={16}/> Run Agent
+      </button>
+    </footer>
+  </div>
+
+  -----------------------
+  🪄 Style Notes
+  -----------------------
+  - use Tailwind for layout, gradients, and responsiveness.
+  - Add subtle drop-shadows, backdrop-blur for glass feel.
+  - Transition widget mounts with fade or slide motion.
+  - Works beautifully on 390×844 viewport (iPhone 14).
+
+  -----------------------
+  ✅ Deliverables
+  -----------------------
+  - Fully functional /ui/boss page
+  - Gradient background, floating glass card
+  - Dynamic widget mount (default spaced-repetition-cards)
+  - Run button mock handler
+  - Tailwind / Framer Motion styling consistent with reference design
