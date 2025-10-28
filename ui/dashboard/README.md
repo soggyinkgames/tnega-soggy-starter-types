@@ -6,7 +6,7 @@ Overview
 - Styling uses vanilla CSS with CSS variables; no Tailwind required.
 
 Getting Started
-1) cd ui/astro
+1) cd ui/dashboard && npm install
 2) npm install
 3) npm run dev
 4) Visit http://localhost:4321

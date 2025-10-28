@@ -1,0 +1,21 @@
+/* Scoped utility classes for 3D flip and card feel. Tailwind handles most styling. */
+.srp-perspective {
+  perspective: 1000px;
+}
+
+.srp-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.srp-backface-hidden {
+  backface-visibility: hidden;
+}
+
+.srp-face-front {
+  transform: rotateY(0deg);
+}
+
+.srp-face-back {
+  transform: rotateY(180deg);
+}
+
