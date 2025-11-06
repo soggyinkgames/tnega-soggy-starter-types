@@ -1,0 +1,193 @@
+# Codex Instruction: Create 8 Orchestration Pattern Packages
+# Location: /packages/
+# Purpose: Scaffold standardized orchestration modules for multi-agent coordination, evaluation, and experimentation.
+
+name: setup_orchestration_packages
+description: |
+  Create 8 orchestration pattern packages directly under /packages/, each representing a unique multi-agent orchestration type.
+  Every folder should include index.ts, config.ts, README.md, and optional agents/ + memory/ subfolders.
+  Classes should end with "Orch" and IDs should start with "orch-".
+
+tasks:
+  - title: Create orchestration packages
+    instructions: |
+      For each orchestration type listed below, create a directory under /packages/ named after its ID (e.g. orch-centralised).
+      Each package must include:
+        - index.ts  → Implements the orchestration logic and exports a class ending with "Orch"
+        - config.ts → Contains metadata (pattern name, coordination type, version, description)
+        - README.md → Explains the pattern, core idea, use cases, and a code example
+        - agents/   → (optional) folder for agent adapters
+        - memory/   → (optional) folder for shared memory or context tools
+
+      All orchestration patterns must implement the shared interface:
+      ```ts
+      export interface OrchestrationPattern {
+        id: string;
+        name: string;
+        description: string;
+        run(task: any, agents: Agent[]): Promise<any>;
+      }
+      ```
+
+      Create the following 8 packages:
+
+      1. orch-centralised
+         class: CentralisedOrch
+         description: A master orchestrator delegates tasks and merges results sequentially.
+         readme: |
+           # CentralisedOrch
+           A single orchestrator manages all agents, delegating tasks and merging their results.
+           **Core Idea:** Centralised control ensures predictable execution and traceable output.
+           **Use Cases**
+           - Customer support routing (delegates tickets)
+           - Financial reporting (aggregates data agents)
+           - Marketing campaign orchestration (coordinates content, design, analytics)
+           **Example**
+           ```ts
+           await CentralisedOrch.run({ goal: "Generate campaign report" }, [CopyAgent, DesignAgent, AnalyticsAgent]);
+           ```
+
+      2. orch-hierarchical
+         class: HierarchicalOrch
+         description: Multi-level orchestration where manager agents oversee teams of workers.
+         readme: |
+           # HierarchicalOrch
+           A layered orchestration model where managers supervise workers.
+           **Core Idea:** Enables large systems to scale through multiple coordination layers.
+           **Use Cases**
+           - Global operations (HQ → regional → local)
+           - Research hierarchy (Director → Analysts → Collectors)
+           - Multi-department projects (Program Manager → Team Leads → Contributors)
+           **Example**
+           ```ts
+           await HierarchicalOrch.run({ goal: "Launch product" }, [ProgramManager, TeamLead, Engineer]);
+           ```
+
+      3. orch-shared-memory
+         class: SharedMemoryOrch
+         description: Agents collaborate via a shared data structure ("blackboard") asynchronously.
+         readme: |
+           # SharedMemoryOrch
+           Agents communicate through shared memory to collaborate asynchronously.
+           **Core Idea:** Encourages flexible cooperation without tight coupling.
+           **Use Cases**
+           - Cross-department dashboards
+           - Creative co-writing on shared drafts
+           - Live analytics aggregation
+           **Example**
+           ```ts
+           await SharedMemoryOrch.run({ goal: "Q4 Summary" }, [SalesAgent, AnalyticsAgent, ProductAgent]);
+           ```
+
+      4. orch-negotiate
+         class: NegotiateOrch
+         description: Implements a Contract-Net model — agents bid or negotiate for tasks.
+         readme: |
+           # NegotiateOrch
+           A decentralized model where agents bid or negotiate to handle tasks.
+           **Core Idea:** The best-suited agent wins dynamically, optimizing quality and cost.
+           **Use Cases**
+           - Procurement automation
+           - Multi-LLM task routing by confidence/cost
+           - Distributed compute job bidding
+           **Example**
+           ```ts
+           await NegotiateOrch.run({ goal: "Summarize document" }, [ClaudeAgent, GPTAgent, GeminiAgent]);
+           ```
+
+      5. orch-concurrent
+         class: ConcurrentOrch
+         description: Executes agent tasks in parallel and merges their results.
+         readme: |
+           # ConcurrentOrch
+           Runs multiple agents in parallel and merges results when complete.
+           **Core Idea:** High throughput orchestration for independent subtasks.
+           **Use Cases**
+           - Data retrieval across APIs
+           - Market analysis
+           - Bulk document processing
+           **Example**
+           ```ts
+           await ConcurrentOrch.run({ goal: "Aggregate reviews" }, [TwitterAgent, RedditAgent, SurveyAgent]);
+           ```
+
+      6. orch-sequential
+         class: SequentialOrch
+         description: Sequential pipeline — output of one agent becomes input for the next.
+         readme: |
+           # SequentialOrch
+           Executes agents one by one, passing each output as the next input.
+           **Core Idea:** Ideal for pipelines or ordered dependencies.
+           **Use Cases**
+           - Content creation (Research → Write → Edit)
+           - ETL pipelines
+           - Hiring workflow (Parse → Screen → Schedule)
+           **Example**
+           ```ts
+           await SequentialOrch.run({ goal: "Produce blog post" }, [ResearchAgent, WriterAgent, EditorAgent]);
+           ```
+
+      7. orch-group-collaborative
+         class: GroupCollaborativeOrch
+         description: Agents discuss in peer-to-peer dialogue to reach consensus.
+         readme: |
+           # GroupCollaborativeOrch
+           Agents collaborate through dialogue, exchanging ideas and building consensus.
+           **Core Idea:** Enables emergent creativity and collective reasoning.
+           **Use Cases**
+           - Brainstorming sessions
+           - Legal or policy deliberation
+           - Research synthesis
+           **Example**
+           ```ts
+           await GroupCollaborativeOrch.run({ prompt: "New brand strategy" }, [DesignAgent, CopyAgent, StrategyAgent]);
+           ```
+
+      8. orch-hybrid-adaptive
+         class: HybridAdaptiveOrch
+         description: Dynamically switches between orchestration modes (e.g., centralised, concurrent, negotiate) depending on context.
+         readme: |
+           # HybridAdaptiveOrch
+           A dynamic orchestrator that adapts between coordination strategies based on context or performance.
+           **Core Idea:** Adaptive orchestration selects the optimal style automatically.
+           **Use Cases**
+           - Enterprise systems adapting to workload
+           - Adaptive AI assistants
+           - Game AI balancing control and autonomy
+           **Example**
+           ```ts
+           await HybridAdaptiveOrch.run({ goal: "Optimize roadmap" }, [StrategyAgent, FinanceAgent, MarketAgent]);
+           ```
+
+  - title: Create global registry
+    instructions: |
+      Create /packages/registry.ts to import all orch-* packages and expose a map:
+      ```ts
+      import {
+        CentralisedOrch,
+        HierarchicalOrch,
+        SharedMemoryOrch,
+        NegotiateOrch,
+        ConcurrentOrch,
+        SequentialOrch,
+        GroupCollaborativeOrch,
+        HybridAdaptiveOrch,
+      } from "./";
+
+      export const OrchestrationRegistry = {
+        "orch-centralised": CentralisedOrch,
+        "orch-hierarchical": HierarchicalOrch,
+        "orch-shared-memory": SharedMemoryOrch,
+        "orch-negotiate": NegotiateOrch,
+        "orch-concurrent": ConcurrentOrch,
+        "orch-sequential": SequentialOrch,
+        "orch-group-collaborative": GroupCollaborativeOrch,
+        "orch-hybrid-adaptive": HybridAdaptiveOrch,
+      };
+      ```
+
+      This registry enables dynamic orchestration selection:
+      ```ts
+      const orch = OrchestrationRegistry["orch-concurrent"];
+      await orch.run(task, agents);
+      ```
