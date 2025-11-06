@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import { config } from "./config";
 
 export class SharedMemoryOrch implements OrchestrationPattern {
@@ -11,19 +11,22 @@ export class SharedMemoryOrch implements OrchestrationPattern {
     return orch.run(task, agents);
   }
 
-  async run(task: any, agents: Agent[]): Promise<any> {
+  async run(task: any, agents: Agent[]) {
     const blackboard: Record<string, any> = { task };
-    const contributions: Array<{ agentId: string; diff: any }> = [];
-
+    const history: HistoryEntry[] = [];
     for (const agent of agents) {
-      const diff = await agent.run(blackboard, { mode: "shared-memory" });
-      contributions.push({ agentId: agent.id, diff });
-      blackboard[agent.id] = diff;
+      const entry: HistoryEntry = { agentId: agent.id, input: { ...blackboard }, timestamp: Date.now() };
+      try {
+        const diff = await agent.run(blackboard, { mode: "shared-memory" });
+        entry.output = diff;
+        blackboard[agent.id] = diff;
+      } catch (err) {
+        entry.error = String(err);
+      }
+      history.push(entry);
     }
-
-    return { id: this.id, blackboard, contributions };
+    return { id: this.id, strategy: "shared-memory", blackboard, history };
   }
 }
 
 export default SharedMemoryOrch;
-

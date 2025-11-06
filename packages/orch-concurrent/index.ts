@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import { config } from "./config";
 
 export class ConcurrentOrch implements OrchestrationPattern {
@@ -11,13 +11,23 @@ export class ConcurrentOrch implements OrchestrationPattern {
     return orch.run(task, agents);
   }
 
-  async run(task: any, agents: Agent[]): Promise<any> {
-    const results = await Promise.all(
-      agents.map(async (agent) => ({ agentId: agent.id, output: await agent.run(task, { mode: "concurrent" }) }))
+  async run(task: any, agents: Agent[]) {
+    const start = Date.now();
+    const results = await Promise.allSettled(
+      agents.map(async (agent) => {
+        const entry: HistoryEntry = { agentId: agent.id, input: task, timestamp: Date.now() };
+        try {
+          const output = await agent.run(task, { mode: "concurrent" });
+          entry.output = output;
+        } catch (err) {
+          entry.error = String(err);
+        }
+        return entry;
+      })
     );
-    return { id: this.id, results };
+    const history = results.map((r) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) }));
+    return { id: this.id, strategy: "concurrent", duration: Date.now() - start, history };
   }
 }
 
 export default ConcurrentOrch;
-

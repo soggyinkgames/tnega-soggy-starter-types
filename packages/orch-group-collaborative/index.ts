@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import { config } from "./config";
 
 export class GroupCollaborativeOrch implements OrchestrationPattern {
@@ -11,28 +11,28 @@ export class GroupCollaborativeOrch implements OrchestrationPattern {
     return orch.run(task, agents);
   }
 
-  async run(task: any, agents: Agent[]): Promise<any> {
+  async run(task: any, agents: Agent[]) {
     const transcript: string[] = [];
+    const history: HistoryEntry[] = [];
     let summary = typeof task?.prompt === "string" ? task.prompt : JSON.stringify(task);
-
     for (let round = 0; round < 3; round++) {
       for (const agent of agents) {
-        let reply: string;
-        if (agent.respond) {
-          reply = await agent.respond(summary, { mode: "group-collaborative", round });
-        } else {
-          const out = await agent.run({ message: summary }, { mode: "group-collaborative", round });
-          reply = typeof out === "string" ? out : JSON.stringify(out);
+        const entry: HistoryEntry = { agentId: agent.id, input: summary, timestamp: Date.now() };
+        try {
+          const reply = agent.respond
+            ? await agent.respond(summary, { mode: "group-collaborative", round })
+            : await agent.run({ message: summary }, { mode: "group-collaborative", round });
+          entry.output = reply;
+          transcript.push(`${agent.name || agent.id}: ${String(reply)}`);
+          summary = `Round ${round + 1} update -> ${String(reply)}`;
+        } catch (err) {
+          entry.error = String(err);
         }
-        transcript.push(`${agent.name}: ${reply}`);
-        summary = `Round ${round + 1} update -> ${reply}`;
+        history.push(entry);
       }
     }
-
-    const consensus = summary;
-    return { id: this.id, transcript, consensus };
+    return { id: this.id, strategy: "group-collaborative", transcript, consensus: summary, history };
   }
 }
 
 export default GroupCollaborativeOrch;
-

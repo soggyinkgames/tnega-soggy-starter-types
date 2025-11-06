@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import { config } from "./config";
 
 export class SequentialOrch implements OrchestrationPattern {
@@ -11,16 +11,22 @@ export class SequentialOrch implements OrchestrationPattern {
     return orch.run(task, agents);
   }
 
-  async run(task: any, agents: Agent[]): Promise<any> {
+  async run(task: any, agents: Agent[]) {
+    const history: HistoryEntry[] = [];
     let input = task;
-    const steps: Array<{ agentId: string; output: any }> = [];
     for (const agent of agents) {
-      input = await agent.run(input, { mode: "sequential", step: steps.length });
-      steps.push({ agentId: agent.id, output: input });
+      const entry: HistoryEntry = { agentId: agent.id, input, timestamp: Date.now() };
+      try {
+        const output = await agent.run(input, { mode: "sequential", step: history.length });
+        entry.output = output;
+        input = output;
+      } catch (err) {
+        entry.error = String(err);
+      }
+      history.push(entry);
     }
-    return { id: this.id, steps, result: input };
+    return { id: this.id, strategy: "sequential", result: input, history };
   }
 }
 
 export default SequentialOrch;
-
