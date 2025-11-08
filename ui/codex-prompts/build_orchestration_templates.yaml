@@ -1,0 +1,23 @@
+name: build_orchestration_templates
+description: |
+  Add standalone orchestration templates under templates/orchestration/* for all 8 orch types.
+  Each template contains README (with use cases), config.ts (metadata), and index.ts (starter usage notes).
+  Update the new-orchestration CLI to surface each template’s use-case summary in the selection list.
+
+invariants:
+  - Templates live in templates/orchestration/<orch-id>/
+  - Orch IDs: orch-centralised, orch-hierarchical, orch-shared-memory, orch-negotiate,
+              orch-concurrent, orch-sequential, orch-group-collaborative, orch-hybrid-adaptive
+  - CLI: scripts/new-orchestration.ts reads template README summaries for descriptions
+  - Do not modify scripts/new-agent.ts or scripts/run-agent.ts
+
+tasks:
+  - Create templates/orchestration/<orch-id>/README.md with concise use cases
+  - Create templates/orchestration/<orch-id>/config.ts (id, name, description)
+  - Create templates/orchestration/<orch-id>/index.ts (stub with how to run and extend)
+  - Refactor scripts/new-orchestration.ts to show descriptions from template READMEs in prompt choices
+
+verify:
+  - command: npm run new-orchestration -- --name demo-orch
+    expect: prompt shows 8 orch types with short use-case summaries; scaffolds orchestrations/demo-orch
+

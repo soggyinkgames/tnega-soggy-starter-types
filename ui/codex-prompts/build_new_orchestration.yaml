@@ -1,0 +1,40 @@
+name: new_orchestration_one_shot
+description: |
+  Enhance the new-orchestration script to behave like new-agent:
+  on CLI call, prompt the developer to choose one of the 8 orchestration
+  types, then scaffold an orchestration instance that "orchestrates the rest".
+
+invariants:
+  - Use the existing script entry: scripts/new-orchestration.ts
+  - Do not modify scripts/new-agent.ts or scripts/run-agent.ts
+  - No /cli folder; keep helpers under scripts/helpers
+  - Orchestration IDs are the 8 existing packages:
+      orch-centralised, orch-hierarchical, orch-shared-memory, orch-negotiate,
+      orch-concurrent, orch-sequential, orch-group-collaborative, orch-hybrid-adaptive
+  - Defaults come from discover.ts (eval + memory) and can be overridden by prompts
+
+tasks:
+  - Prompt: If --name not provided, ask for a name (kebab-case)
+  - Prompt: Show a select list of the 8 orchestration types (by ID + friendly label)
+  - Discover agents from /agents (exclude hidden/examples) and prompt to choose 0..N
+  - Compute defaults from scripts/helpers/discover.ts:
+      - memory backend from defaultMemoryForOrch(orchId)
+      - eval suite from defaultEvalForStrategy(strategy inferred from orchId)
+  - Prompt: Toggle to accept defaults; if disabled, allow override:
+      - Choose eval: basic | system | model-graded
+      - Choose memory backend: mem-inmemory | mem-redis | mem-supabase
+  - Write config file at orchestrations/<name>/config.json with:
+      { orchId, agents: string[], evalId, memory: { backend, types: [] } }
+  - Write README.md at orchestrations/<name>/README.md summarizing choices and how to run
+  - Emit artifacts via scripts/helpers/io and scripts/helpers/artifacts
+
+verify:
+  - command: npm run new-orchestration -- --name demo-orch
+    expect: prompts appear, config file written under orchestrations/demo-orch
+  - command: npm run run-orchestration -- --name demo-orch
+    expect: prints table with strategy/eval/memory and writes evals/logs artifact
+
+rollback:
+  - If prompts fail on a headless environment, allow passing --pattern and --agents to skip prompts
+  - Keep defaults path working without overrides
+
