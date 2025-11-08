@@ -5,7 +5,12 @@ export default defineConfig({
     include: ["scripts/tests/**/*.spec.ts"],
     environment: "node",
     globals: true,
-    reporters: ["basic"],
+    reporters: [[
+        "default",
+        {
+          "summary": false
+        }
+      ]],
   },
 });
 
