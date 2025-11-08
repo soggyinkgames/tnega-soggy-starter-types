@@ -12,4 +12,3 @@ export const DEFAULT_EVALS: Record<string, string[]> = {
   "7-educational": ["modelgraded", "safety"],
   "8-dev-infrastructure": ["regression", "system"],
 };
-

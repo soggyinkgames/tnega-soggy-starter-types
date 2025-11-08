@@ -13,6 +13,7 @@
     "agent": "tsx scripts/run-agent.ts",
     "test:tools": "tsx ./scripts/test-tools.ts",
     "test:tools": "vitest -c vitest.tools.config.ts run",
+    "test:scripts": "vitest -c vitest.scripts.config.ts run",
     "test:orch": "vitest -c vitest.orch.config.ts run",
     "ui:dev": "cd ui/astro && npm run dev",
     "ui:build": "cd ui/astro && npm run build",
