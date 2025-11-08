@@ -1,0 +1,39 @@
+name: setup_orch_tests
+description: |
+  Make orchestration unit tests run with one Vitest command.
+  Keep tests colocated, no duplicate runners, no CLI folder use.
+
+invariants:
+  - Orchestrations live under packages/orch-*/
+  - One colocated *.spec.ts per orchestration
+  - Tests run via Vitest (no custom runner)
+  - Do not modify scripts/new-agent.ts or scripts/run-agent.ts
+
+tasks:
+  - Ensure colocated specs exist (create only if missing):
+      - packages/orch-centralised/centralised.spec.ts
+      - packages/orch-hierarchical/hierarchical.spec.ts
+      - packages/orch-shared-memory/shared-memory.spec.ts
+      - packages/orch-negotiate/negotiate.spec.ts
+      - packages/orch-concurrent/concurrent.spec.ts
+      - packages/orch-sequential/sequential.spec.ts
+      - packages/orch-group-collaborative/group-collaborative.spec.ts
+      - packages/orch-hybrid-adaptive/hybrid-adaptive.spec.ts
+  - Set package.json script:
+      - test:orch: "vitest run packages/orch-*/**/*.spec.ts"
+  - Remove duplicates:
+      - Delete scripts/test-orch.ts if present
+      - Do not add a /cli folder
+  - Update docs:
+      - Append decision + script to CODEEXECPLAN.md
+      - Append fixes + TODO (glob validation) to CODEEXECPLAN_LOG.md
+
+verify:
+  - command: npm run test:orch
+    expect: Vitest runs all packages/orch-*/**/*.spec.ts and passes
+
+rollback:
+  - If discovery fails in CI/shell:
+      - Add vitest.config.ts with test.include: ["packages/orch-*/**/*.spec.ts"]
+      - Keep script as: "vitest run"
+

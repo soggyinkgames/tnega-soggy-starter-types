@@ -11,6 +11,7 @@
     "test:watch": "vitest watch",
     "new-agent": "tsx scripts/new-agent.ts",
     "agent": "tsx scripts/run-agent.ts",
+    "test:orch": "vitest -c vitest.orch.config.ts run",
     "ui:dev": "cd ui/astro && npm run dev",
     "ui:build": "cd ui/astro && npm run build",
     "ui:preview": "cd ui/astro && npm run preview"
