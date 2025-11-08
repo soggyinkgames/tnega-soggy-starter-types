@@ -1,0 +1,400 @@
+# Codex Instruction: Enhanced Orchestration Pattern Packages
+# Location: /packages/
+# Purpose: Implement robust, typed, and instrumented orchestration classes for multi-agent evaluation and CLI testing.
+
+name: enhanced_orchestration_packages
+description: |
+  Refactor all orch-* packages to include improved type safety, runtime error handling,
+  timestamped history logging, and descriptive outputs.
+  Each class must end with "Orch" and implement OrchestrationPattern from ../types.
+
+shared_interface: |
+  // /packages/types.ts
+  export interface HistoryEntry {
+    agentId: string;
+    input?: any;
+    output?: any;
+    error?: string;
+    timestamp: number;
+  }
+
+  export interface OrchestrationResult {
+    id: string;
+    strategy?: string;
+    result?: any;
+    history?: HistoryEntry[];
+    [key: string]: any;
+  }
+
+  export interface OrchestrationPattern {
+    id: string;
+    name: string;
+    description: string;
+    run(task: any, agents: Agent[]): Promise<OrchestrationResult>;
+  }
+
+  export interface Agent {
+    id: string;
+    name?: string;
+    role?: string;
+    cost?: number;
+    propose?: (task: any) => Promise<{ score?: number } | null>;
+    run: (input: any, context?: Record<string, any>) => Promise<any>;
+    respond?: (prompt: string, context?: Record<string, any>) => Promise<string>;
+  }
+
+files:
+
+  - path: /packages/orch-centralised/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class CentralisedOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new CentralisedOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const history: HistoryEntry[] = [];
+          let last = task;
+          for (const agent of agents) {
+            const entry: HistoryEntry = { agentId: agent.id, input: last, timestamp: Date.now() };
+            try {
+              const output = await agent.run(last, { mode: "centralised", history });
+              entry.output = output;
+              last = output;
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          return { id: this.id, strategy: "centralised", result: last, history };
+        }
+      }
+
+      export default CentralisedOrch;
+
+  - path: /packages/orch-concurrent/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class ConcurrentOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new ConcurrentOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const start = Date.now();
+          const results = await Promise.allSettled(
+            agents.map(async (agent) => {
+              const entry: HistoryEntry = { agentId: agent.id, input: task, timestamp: Date.now() };
+              try {
+                const output = await agent.run(task, { mode: "concurrent" });
+                entry.output = output;
+              } catch (err) {
+                entry.error = String(err);
+              }
+              return entry;
+            })
+          );
+          const history = results.map((r) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) }));
+          return { id: this.id, strategy: "concurrent", duration: Date.now() - start, history };
+        }
+      }
+
+      export default ConcurrentOrch;
+
+  - path: /packages/orch-sequential/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class SequentialOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new SequentialOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const history: HistoryEntry[] = [];
+          let input = task;
+          for (const agent of agents) {
+            const entry: HistoryEntry = { agentId: agent.id, input, timestamp: Date.now() };
+            try {
+              const output = await agent.run(input, { mode: "sequential", step: history.length });
+              entry.output = output;
+              input = output;
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          return { id: this.id, strategy: "sequential", result: input, history };
+        }
+      }
+
+      export default SequentialOrch;
+
+  - path: /packages/orch-shared-memory/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class SharedMemoryOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new SharedMemoryOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const blackboard: Record<string, any> = { task };
+          const history: HistoryEntry[] = [];
+          for (const agent of agents) {
+            const entry: HistoryEntry = { agentId: agent.id, input: { ...blackboard }, timestamp: Date.now() };
+            try {
+              const diff = await agent.run(blackboard, { mode: "shared-memory" });
+              entry.output = diff;
+              blackboard[agent.id] = diff;
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          return { id: this.id, strategy: "shared-memory", blackboard, history };
+        }
+      }
+
+      export default SharedMemoryOrch;
+
+  - path: /packages/orch-negotiate/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class NegotiateOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new NegotiateOrch();
+          return orch.run(task, agents);
+        }
+
+        private async score(agent: Agent, task: any): Promise<number> {
+          try {
+            const proposal = agent.propose ? await agent.propose(task) : null;
+            if (proposal && typeof proposal.score === "number") return proposal.score;
+          } catch {}
+          const cost = typeof agent.cost === "number" ? agent.cost : 1;
+          return 1 / (1 + cost);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const scored = await Promise.all(agents.map(async (a) => ({ agent: a, score: await this.score(a, task) })));
+          scored.sort((a, b) => b.score - a.score);
+          const winner = scored[0]?.agent;
+          const history: HistoryEntry[] = [];
+          if (winner) {
+            const entry: HistoryEntry = { agentId: winner.id, input: task, timestamp: Date.now() };
+            try {
+              entry.output = await winner.run(task, { mode: "negotiate", ranking: scored });
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          return { id: this.id, strategy: "negotiate", winner: winner?.id, ranking: scored, history };
+        }
+      }
+
+      export default NegotiateOrch;
+
+  - path: /packages/orch-group-collaborative/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class GroupCollaborativeOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new GroupCollaborativeOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const transcript: string[] = [];
+          const history: HistoryEntry[] = [];
+          let summary = typeof task?.prompt === "string" ? task.prompt : JSON.stringify(task);
+          for (let round = 0; round < 3; round++) {
+            for (const agent of agents) {
+              const entry: HistoryEntry = { agentId: agent.id, input: summary, timestamp: Date.now() };
+              try {
+                const reply = agent.respond
+                  ? await agent.respond(summary, { mode: "group-collaborative", round })
+                  : await agent.run({ message: summary }, { mode: "group-collaborative", round });
+                entry.output = reply;
+                transcript.push(`${agent.name || agent.id}: ${reply}`);
+                summary = `Round ${round + 1} update -> ${reply}`;
+              } catch (err) {
+                entry.error = String(err);
+              }
+              history.push(entry);
+            }
+          }
+          return { id: this.id, strategy: "group-collaborative", transcript, consensus: summary, history };
+        }
+      }
+
+      export default GroupCollaborativeOrch;
+
+  - path: /packages/orch-hierarchical/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class HierarchicalOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new HierarchicalOrch();
+          return orch.run(task, agents);
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const managers = agents.filter(a => (a.role || "").toLowerCase().includes("manager"));
+          const workers = agents.filter(a => !managers.includes(a));
+          const history: HistoryEntry[] = [];
+          const workerOutputs: Record<string, any> = {};
+          for (const worker of workers) {
+            const entry: HistoryEntry = { agentId: worker.id, input: task, timestamp: Date.now() };
+            try {
+              const output = await worker.run(task, { mode: "hierarchical", level: "worker" });
+              workerOutputs[worker.id] = output;
+              entry.output = output;
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          const decisions: Record<string, any> = {};
+          if (managers.length > 0) {
+            for (const manager of managers) {
+              const entry: HistoryEntry = { agentId: manager.id, input: { task, workerOutputs }, timestamp: Date.now() };
+              try {
+                entry.output = await manager.run({ task, workerOutputs }, { mode: "hierarchical", level: "manager" });
+                decisions[manager.id] = entry.output;
+              } catch (err) {
+                entry.error = String(err);
+              }
+              history.push(entry);
+            }
+            return { id: this.id, strategy: "hierarchical", workerOutputs, decisions, history };
+          }
+          return { id: this.id, strategy: "hierarchical-fallback", workerOutputs, history };
+        }
+      }
+
+      export default HierarchicalOrch;
+
+  - path: /packages/orch-hybrid-adaptive/index.ts
+    content: |
+      import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+      import { config } from "./config";
+
+      export class HybridAdaptiveOrch implements OrchestrationPattern {
+        id = config.id;
+        name = config.name;
+        description = config.description;
+
+        static async run(task: any, agents: Agent[]) {
+          const orch = new HybridAdaptiveOrch();
+          return orch.run(task, agents);
+        }
+
+        private async runConcurrent(task: any, agents: Agent[]) {
+          return Promise.all(agents.map(async (a) => ({ agentId: a.id, output: await a.run(task, { mode: "hybrid-concurrent" }) })));
+        }
+
+        private async runSequential(task: any, agents: Agent[]) {
+          let input = task;
+          const steps: any[] = [];
+          for (const a of agents) {
+            input = await a.run(input, { mode: "hybrid-sequential", step: steps.length });
+            steps.push({ agentId: a.id, output: input });
+          }
+          return { steps, result: input };
+        }
+
+        private async runNegotiate(task: any, agents: Agent[]) {
+          const scored = await Promise.all(agents.map(async (a) => {
+            let score = 0.5;
+            try {
+              const p = a.propose ? await a.propose(task) : null;
+              if (p && typeof p.score === "number") score = p.score;
+            } catch {}
+            const adjust = typeof a.cost === "number" ? 1 / (1 + a.cost) : 0.5;
+            return { agent: a, score: (score + adjust) / 2 };
+          }));
+          scored.sort((a, b) => b.score - a.score);
+          const winner = scored[0]?.agent;
+          const result = winner ? await winner.run(task, { mode: "hybrid-negotiate", winner: winner.id, ranking: scored }) : null;
+          return { winner: winner?.id, ranking: scored, result };
+        }
+
+        async run(task: any, agents: Agent[]) {
+          const pref = (task?.strategy || task?.mode || "").toString().toLowerCase();
+          if (pref === "concurrent" || agents.length >= 3) {
+            const results = await this.runConcurrent(task, agents);
+            return { id: this.id, strategy: "concurrent", results };
+          }
+          if (pref === "negotiate") {
+            const outcome = await this.runNegotiate(task, agents);
+            return { id: this.id, strategy: "negotiate", ...outcome };
+          }
+          if (pref === "sequential") {
+            const outcome = await this.runSequential(task, agents);
+            return { id: this.id, strategy: "sequential", ...outcome };
+          }
+          let input = task;
+          const history: HistoryEntry[] = [];
+          for (const a of agents) {
+            const entry: HistoryEntry = { agentId: a.id, input, timestamp: Date.now() };
+            try {
+              entry.output = await a.run(input, { mode: "hybrid-default" });
+              input = entry.output;
+            } catch (err) {
+              entry.error = String(err);
+            }
+            history.push(entry);
+          }
+          return { id: this.id, strategy: "centralised-default", result: input, history };
+        }
+      }
+
+      export default HybridAdaptiveOrch;
