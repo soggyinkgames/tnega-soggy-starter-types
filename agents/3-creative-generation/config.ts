@@ -2,7 +2,7 @@
 export default {
     id: "3-creative-generation",
     title: "Creative Generation Agent",
-    orchestration: "llamaindex", // crewai | langchain | langgraph
+    orchestration: "orch-group-collaborative", // crewai | langchain | langgraph
     memory: { shortTerm: "redis", longTerm: "supabase" },
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",

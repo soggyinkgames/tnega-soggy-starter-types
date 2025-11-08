@@ -2,7 +2,7 @@
 export default {
     id: "4-workflow-assistant",
     title: "Workflow / Insight Agent",
-    orchestration: "llamaindex", // crewai | langchain | langgraph
+    orchestration: "orch-sequential", // crewai | langchain | langgraph
     memory: { shortTerm: "redis", longTerm: "supabase" },
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",

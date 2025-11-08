@@ -2,7 +2,7 @@
 export default {
     id: "7-educational",
     title: "Educational Agent",
-    orchestration: "llamaindex", // crewai | langchain | langgraph
+    orchestration: "orch-centralised", // crewai | langchain | langgraph
     memory: { shortTerm: "redis", longTerm: "supabase" },
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",

@@ -2,7 +2,7 @@
 export default {
     id: "1-knowledge-insight",
     title: "Knowledge / Insight Agent",
-    orchestration: "llamaindex", // crewai | langchain | langgraph
+    orchestration: "orch-shared-memory", // crewai | langchain | langgraph
     memory: { shortTerm: "redis", longTerm: "supabase" },
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",
