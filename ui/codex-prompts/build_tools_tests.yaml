@@ -1,0 +1,33 @@
+name: setup_tools_tests
+description: |
+  Set up unit tests for all tools with a single Vitest command.
+  Keep tests colocated with each tool; remove duplicate runners.
+
+invariants:
+  - Tools live under tools/*/
+  - One colocated *.spec.ts per tool folder
+  - Tests run via Vitest (no custom runner)
+  - Do not modify scripts/new-agent.ts or scripts/run-agent.ts
+
+tasks:
+  - Ensure colocated specs exist (create only if missing):
+      - tools/search/index.spec.ts
+      - tools/codegen/index.spec.ts
+      - tools/analyzeData/index.spec.ts
+      - tools/generateContent/index.spec.ts
+      - tools/summarize/index.spec.ts
+      - tools/queryKnowledgeBase/index.spec.ts
+  - Add Vitest config for tools:
+      - vitest.tools.config.ts with include: ["tools/*/**/*.spec.ts"], node env, globals
+  - Update package.json script:
+      - test:tools: "vitest -c vitest.tools.config.ts run"
+  - Remove duplicates:
+      - Delete scripts/test-tools.ts if present
+  - Update docs:
+      - Append decision + script to CODEEXECPLAN.md
+      - Append fixes to CODEEXECPLAN_LOG.md
+
+verify:
+  - command: npm run test:tools
+    expect: Vitest discovers and runs tools/*/**/*.spec.ts and passes
+
