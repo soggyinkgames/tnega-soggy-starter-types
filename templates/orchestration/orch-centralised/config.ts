@@ -1,6 +1,9 @@
 export default {
   id: "orch-centralised",
-  name: "Centralised Orchestration",
-  description: "A master orchestrator delegates tasks and merges results sequentially.",
+  description: "Central orchestrator pattern for educational tutor–learner loops",
+  default_tooling: "langchain",
+  supported_tooling: ["langchain", "langgraph"],
+  memory_model: "central",
+  evaluation_mode: "system",
+  node_roles: {},
 };
-

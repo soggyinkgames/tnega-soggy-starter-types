@@ -1,6 +1,9 @@
 export default {
   id: "orch-negotiate",
-  name: "Negotiation Orchestration",
-  description: "Implements a Contract-Net model — agents bid or negotiate for tasks.",
+  description: "Negotiation-based orchestration for simulation and scenario agents",
+  default_tooling: "crewai",
+  supported_tooling: ["crewai", "langgraph"],
+  memory_model: "adaptive",
+  evaluation_mode: "system",
+  node_roles: {},
 };
-

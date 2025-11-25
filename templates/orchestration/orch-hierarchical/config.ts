@@ -1,6 +1,13 @@
 export default {
   id: "orch-hierarchical",
-  name: "Hierarchical Orchestration",
-  description: "Multi-level orchestration where manager agents oversee teams of workers.",
+  description: "Planner–executor–reviewer orchestration",
+  default_tooling: "crewai",
+  supported_tooling: ["langgraph", "langchain"],
+  memory_model: "per-session",
+  evaluation_mode: "system",
+  node_roles: {
+    planner: "Breaks high-level tasks into subtasks",
+    executor: "Executes subtasks",
+    reviewer: "Validates and merges outputs",
+  },
 };
-
