@@ -1,16 +1,100 @@
-import { describe, it, expect } from "vitest";
-import { ConcurrentOrch } from ".";
+import { describe, it, expect, vi } from "vitest";
+import { ConcurrentOrch, runOrchFramework } from ".";
+import type { Agent } from "../types";
 
 describe("ConcurrentOrch", () => {
-  it("runs in parallel and returns history with duration", async () => {
-    const a = { id: "a", run: async () => ({ a: true }) } as any;
-    const b = { id: "b", run: async () => ({ b: true }) } as any;
-    const res = await ConcurrentOrch.run({ ping: true }, [a, b]);
+  it("runs all agents concurrently with per-index inputs and context", async () => {
+    // Given: one task per agent (multi-variant case)
+    const tasks = [{ goal: "g1" }, { goal: "g2" }];
+
+    const agentA: Agent = {
+      id: "agent-a",
+      run: vi.fn(async (input: any, ctx?: any) => {
+        // Context should be populated correctly
+        expect(ctx?.mode).toBe("concurrent");
+        expect(ctx?.index).toBe(0);
+        expect(ctx?.runOrchFramework).toBe(runOrchFramework);
+
+        // Return a value derived from the input so we can assert mapping
+        return `${input.goal}-A`;
+      })
+    } as any;
+
+    const agentB: Agent = {
+      id: "agent-b",
+      run: vi.fn(async (input: any, ctx?: any) => {
+        expect(ctx?.mode).toBe("concurrent");
+        expect(ctx?.index).toBe(1);
+        return `${input.goal}-B`;
+      })
+    } as any;
+
+    // When: running the concurrent orchestration
+    const res = await ConcurrentOrch.run(tasks, [agentA, agentB]);
+
+    // Then: orchestration metadata is correct
     expect(res.id).toBe("orch-concurrent");
     expect(res.strategy).toBe("concurrent");
-    expect(Array.isArray(res.history)).toBe(true);
-    expect((res.history as any[]).length).toBe(2);
-    expect(typeof (res as any).duration).toBe("number");
+    expect(typeof res.duration).toBe("number");
+
+    // And: result preserves per-agent input/output mapping
+    expect(res.result).toEqual([
+      { agentId: "agent-a", input: tasks[0], output: "g1-A" },
+      { agentId: "agent-b", input: tasks[1], output: "g2-B" }
+    ]);
+
+    // And: history entries are recorded with timestamps
+    expect(res.history?.length).toBe(2);
+    expect(res.history?.every(h => typeof h.timestamp === "number")).toBe(true);
+
+    // And: agents were called with the expected inputs and context
+    expect(agentA.run).toHaveBeenCalledWith(
+      tasks[0],
+      expect.objectContaining({ mode: "concurrent", index: 0 })
+    );
+    expect(agentB.run).toHaveBeenCalledWith(
+      tasks[1],
+      expect.objectContaining({ mode: "concurrent", index: 1 })
+    );
+  });
+
+  it("captures errors per agent while still running other agents", async () => {
+    // Given: one failing agent and one successful agent
+    const failingAgent: Agent = {
+      id: "fail",
+      run: vi.fn(async () => {
+        throw new Error("boom");
+      })
+    } as any;
+
+    const okAgent: Agent = {
+      id: "ok",
+      run: vi.fn(async (input: any) => `${input}-ok`)
+    } as any;
+
+    // When: running with a shared task for all agents
+    const res = await ConcurrentOrch.run("task", [failingAgent, okAgent]);
+
+    // Then: result only includes successful agent outputs
+    expect(res.result).toEqual([
+      { agentId: "ok", input: "task", output: "task-ok" }
+    ]);
+
+    // And: history includes both success and failure, with error captured
+    const failHistory = res.history?.find(h => h.agentId === "fail");
+    const okHistory = res.history?.find(h => h.agentId === "ok");
+
+    expect(failHistory?.error).toContain("boom");
+    expect(okHistory?.output).toBe("task-ok");
+
+    // And: both agents were invoked exactly once
+    expect(failingAgent.run).toHaveBeenCalledTimes(1);
+    expect(okAgent.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when no agents are provided", async () => {
+    await expect(
+      ConcurrentOrch.run("task", [])
+    ).rejects.toThrow("ConcurrentOrch requires at least one agent");
   });
 });
-

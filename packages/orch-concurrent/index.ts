@@ -1,9 +1,10 @@
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
-import { config } from "./config";
+import config from "./config";
+import { runOrchFramework } from "../runOrchFramework";
 
 export class ConcurrentOrch implements OrchestrationPattern {
   id = config.id;
-  name = config.name;
+  name = "Concurrent Orchestration";
   description = config.description;
 
   static async run(task: any, agents: Agent[]) {
@@ -12,22 +13,55 @@ export class ConcurrentOrch implements OrchestrationPattern {
   }
 
   async run(task: any, agents: Agent[]) {
+    if (!agents || agents.length === 0) {
+      throw new Error("ConcurrentOrch requires at least one agent");
+    }
+
     const start = Date.now();
-    const results = await Promise.allSettled(
-      agents.map(async (agent) => {
-        const entry: HistoryEntry = { agentId: agent.id, input: task, timestamp: Date.now() };
+    const isArray = Array.isArray(task);
+
+    const history: HistoryEntry[] = await Promise.all(
+      agents.map(async (agent, index) => {
+        const input = isArray ? (task[index] ?? task[0]) : task;
+
+        const entry: HistoryEntry = {
+          agentId: agent.id,
+          input,
+          timestamp: Date.now()
+        };
+
         try {
-          const output = await agent.run(task, { mode: "concurrent" });
+          const output = await agent.run(input, {
+            mode: "concurrent",
+            index,
+            runOrchFramework
+          });
           entry.output = output;
         } catch (err) {
           entry.error = String(err);
         }
+
         return entry;
       })
     );
-    const history = results.map((r) => (r.status === "fulfilled" ? r.value : { error: String(r.reason) }));
-    return { id: this.id, strategy: "concurrent", duration: Date.now() - start, history };
+
+    const result = history
+      .filter((h) => typeof (h as any).output !== "undefined")
+      .map((h) => ({
+        agentId: h.agentId,
+        input: h.input,
+        output: (h as any).output
+      }));
+
+    return {
+      id: this.id,
+      strategy: "concurrent",
+      duration: Date.now() - start,
+      result,
+      history
+    };
   }
 }
 
 export default ConcurrentOrch;
+export { runOrchFramework };
