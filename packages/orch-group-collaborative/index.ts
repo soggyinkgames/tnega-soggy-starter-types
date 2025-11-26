@@ -1,9 +1,11 @@
+// orchestrations/groupCollaborative/index.ts
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
-import { config } from "./config";
+import config from "./config";
+import { runOrchFramework } from "../runOrchFramework";
 
 export class GroupCollaborativeOrch implements OrchestrationPattern {
   id = config.id;
-  name = config.name;
+  name = "Group Collaborative Orchestration";
   description = config.description;
 
   static async run(task: any, agents: Agent[]) {
@@ -12,27 +14,53 @@ export class GroupCollaborativeOrch implements OrchestrationPattern {
   }
 
   async run(task: any, agents: Agent[]) {
-    const transcript: string[] = [];
-    const history: HistoryEntry[] = [];
-    let summary = typeof task?.prompt === "string" ? task.prompt : JSON.stringify(task);
-    for (let round = 0; round < 3; round++) {
-      for (const agent of agents) {
-        const entry: HistoryEntry = { agentId: agent.id, input: summary, timestamp: Date.now() };
-        try {
-          const reply = agent.respond
-            ? await agent.respond(summary, { mode: "group-collaborative", round })
-            : await agent.run({ message: summary }, { mode: "group-collaborative", round });
-          entry.output = reply;
-          transcript.push(`${agent.name || agent.id}: ${String(reply)}`);
-          summary = `Round ${round + 1} update -> ${String(reply)}`;
-        } catch (err) {
-          entry.error = String(err);
-        }
-        history.push(entry);
-      }
+    if (!agents || agents.length === 0) {
+      throw new Error("GroupCollaborativeOrch requires at least one agent");
     }
-    return { id: this.id, strategy: "group-collaborative", transcript, consensus: summary, history };
+
+    const history: HistoryEntry[] = [];
+    const start = Date.now();
+
+    // Shared state for all agents – grows as each agent contributes
+    const shared = {
+      messages: [] as { agentId: string; output: any }[]
+    };
+
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i];
+
+      const entry: HistoryEntry = {
+        agentId: agent.id,
+        input: task,
+        timestamp: Date.now()
+      };
+
+      try {
+        const output = await agent.run(task, {
+          mode: "group-collaborative",
+          turn: i,
+          shared,
+          runOrchFramework
+        });
+
+        entry.output = output;
+        shared.messages.push({ agentId: agent.id, output });
+      } catch (err) {
+        entry.error = String(err);
+      }
+
+      history.push(entry);
+    }
+
+    return {
+      id: this.id,
+      strategy: "group-collaborative",
+      duration: Date.now() - start,
+      result: shared.messages,
+      history
+    };
   }
 }
 
 export default GroupCollaborativeOrch;
+export { runOrchFramework };
