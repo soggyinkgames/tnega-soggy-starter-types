@@ -1,9 +1,11 @@
+// orchestrations/sharedMemory/index.ts
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
-import { config } from "./config";
+import config from "./config";
+import { runOrchFramework } from "../runOrchFramework";
 
 export class SharedMemoryOrch implements OrchestrationPattern {
   id = config.id;
-  name = config.name;
+  name = "Shared Memory Orchestration";
   description = config.description;
 
   static async run(task: any, agents: Agent[]) {
@@ -12,21 +14,55 @@ export class SharedMemoryOrch implements OrchestrationPattern {
   }
 
   async run(task: any, agents: Agent[]) {
-    const blackboard: Record<string, any> = { task };
+    if (!agents || agents.length === 0) {
+      throw new Error("SharedMemoryOrch requires at least one agent");
+    }
+
+    const start = Date.now();
     const history: HistoryEntry[] = [];
-    for (const agent of agents) {
-      const entry: HistoryEntry = { agentId: agent.id, input: { ...blackboard }, timestamp: Date.now() };
+
+    // Shared state all agents can read/write
+    const blackboard: Record<string, any> = { task };
+
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i];
+
+      // Snapshot of blackboard at the time of call for history
+      const entry: HistoryEntry = {
+        agentId: agent.id,
+        input: { ...blackboard },
+        timestamp: Date.now()
+      };
+
       try {
-        const diff = await agent.run(blackboard, { mode: "shared-memory" });
+        // Agents get the live blackboard object to mutate
+        const diff = await agent.run(blackboard, {
+          mode: "shared-memory",
+          index: i,
+          runOrchFramework,
+          history
+        });
+
         entry.output = diff;
+
+        // Convention: store each agent’s contribution under its id
         blackboard[agent.id] = diff;
       } catch (err) {
         entry.error = String(err);
       }
+
       history.push(entry);
     }
-    return { id: this.id, strategy: "shared-memory", blackboard, history };
+
+    return {
+      id: this.id,
+      strategy: "shared-memory",
+      duration: Date.now() - start,
+      blackboard,
+      history
+    };
   }
 }
 
 export default SharedMemoryOrch;
+export { runOrchFramework };
