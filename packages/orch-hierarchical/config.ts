@@ -1,10 +1,7 @@
-export const config = {
-  id: "orch-hierarchical",
-  name: "Hierarchical Orchestration",
-  coordinationType: "hierarchical",
-  version: "1.0.0",
-  description: "Multi-level orchestration where manager agents oversee teams of workers.",
+export default {
+  id: "orch-hierarchical", 
+  description: "Multi-level specialist-subtree orchestration, good when wok breaks into supervised domains.",
+  supported_tooling: ["crewai"],
+  default_tooling: "crewai",
+  compatible_agent_types: ["strategy", "knowledge-insight", "educational", "dev-infrastructure"]
 };
-
-export type HierarchicalConfig = typeof config;
-

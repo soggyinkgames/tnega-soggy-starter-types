@@ -1,10 +1,7 @@
-export const config = {
+export default {
   id: "orch-shared-memory",
-  name: "Shared Memory Orchestration",
-  coordinationType: "shared-memory",
-  version: "1.0.0",
-  description: "Agents collaborate via a shared data structure (blackboard) asynchronously.",
+  description: "All agents collaborate via a shared data base asynchronously.",
+  supported_tooling: ["langgraph", "crewai"],
+  default_tooling: "langgraph",
+  compatible_agent_types: ["knowledge-insight", "data-analyst-debugger", "simulation-scenario", "personal-workflow-assistant"]
 };
-
-export type SharedMemoryConfig = typeof config;
-

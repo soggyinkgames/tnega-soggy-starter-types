@@ -1,10 +1,7 @@
-export const config = {
+export default {
   id: "orch-centralised",
-  name: "Centralised Orchestration",
-  coordinationType: "centralised",
-  version: "1.0.0",
-  description: "A master orchestrator delegates tasks and merges results sequentially.",
+  description: "One boss agent routes work and merges outputs",
+  supported_tooling: ["langchain"],
+  default_tooling: "langchain",
+  compatible_agent_types: ["educational", "strategy", "personal-workflow-assistant", "dev-infrastructure"]
 };
-
-export type CentralisedConfig = typeof config;
-

@@ -1,10 +1,7 @@
-export const config = {
+export default {
   id: "orch-sequential",
-  name: "Sequential Orchestration",
-  coordinationType: "sequential",
-  version: "1.0.0",
   description: "Sequential pipeline — output of one agent becomes input for the next.",
+  supported_tooling: ["langchain", "langgraph"],
+  default_tooling: "langchain",
+  compatible_agent_types: ["personal-workflow-assistant", "creative-generation", "educational", "data-analyst-debugger", "dev-infrastructure"]
 };
-
-export type SequentialConfig = typeof config;
-

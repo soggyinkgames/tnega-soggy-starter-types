@@ -1,10 +1,7 @@
-export const config = {
+export default {
   id: "orch-hybrid-adaptive",
-  name: "Hybrid Adaptive Orchestration",
-  coordinationType: "hybrid-adaptive",
-  version: "1.0.0",
-  description: "Dynamically switches between orchestration modes depending on context.",
+  description: "Mix and switch modes automatically based on context/outcome.",
+  supported_tooling: ["langgraph", "crewai"],
+  default_tooling: "langgraph",
+  compatible_agent_types: ["dev-infrastructure", "simulation-scenario", "startegy", "personal-workflow-assistant"]
 };
-
-export type HybridAdaptiveConfig = typeof config;
-
