@@ -1,9 +1,11 @@
+// orchestrations/hybridAdaptive/index.ts
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
-import { config } from "./config";
+import config from "./config";
+import { runOrchFramework } from "../runOrchFramework";
 
 export class HybridAdaptiveOrch implements OrchestrationPattern {
   id = config.id;
-  name = config.name;
+  name = "Hybrid Adaptive Orchestration";
   description = config.description;
 
   static async run(task: any, agents: Agent[]) {
@@ -12,63 +14,231 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
   }
 
   private async runConcurrent(task: any, agents: Agent[]) {
-    return Promise.all(agents.map(async (a) => ({ agentId: a.id, output: await a.run(task, { mode: "hybrid-concurrent" }) })));
+    const history: HistoryEntry[] = [];
+
+    await Promise.all(
+      agents.map(async (agent) => {
+        const entry: HistoryEntry = {
+          agentId: agent.id,
+          input: task,
+          timestamp: Date.now()
+        };
+
+        try {
+          const output = await agent.run(task, {
+            mode: "hybrid-concurrent",
+            runOrchFramework
+          });
+          entry.output = output;
+        } catch (err) {
+          entry.error = String(err);
+        }
+
+        history.push(entry);
+      })
+    );
+
+    const result = history
+      .filter((h) => typeof (h as any).output !== "undefined")
+      .map((h) => ({
+        agentId: h.agentId,
+        input: h.input,
+        output: (h as any).output
+      }));
+
+    return { result, history };
   }
 
   private async runSequential(task: any, agents: Agent[]) {
-    let input = task;
-    const steps: any[] = [];
-    for (const a of agents) {
-      input = await a.run(input, { mode: "hybrid-sequential", step: steps.length });
-      steps.push({ agentId: a.id, output: input });
-    }
-    return { steps, result: input };
-  }
-
-  private async runNegotiate(task: any, agents: Agent[]) {
-    const scored = await Promise.all(agents.map(async (a) => {
-      let score = 0.5;
-      try {
-        const p = a.propose ? await a.propose(task) : null;
-        if (p && typeof p.score === "number") score = p.score;
-      } catch {}
-      const adjust = typeof a.cost === "number" ? 1 / (1 + a.cost) : 0.5;
-      return { agent: a, score: (score + adjust) / 2 };
-    }));
-    scored.sort((a, b) => b.score - a.score);
-    const winner = scored[0]?.agent;
-    const result = winner ? await winner.run(task, { mode: "hybrid-negotiate", winner: winner.id, ranking: scored }) : null;
-    return { winner: winner?.id, ranking: scored, result };
-  }
-
-  async run(task: any, agents: Agent[]) {
-    const pref = (task?.strategy || task?.mode || "").toString().toLowerCase();
-    if (pref === "concurrent" || agents.length >= 3) {
-      const results = await this.runConcurrent(task, agents);
-      return { id: this.id, strategy: "concurrent", results };
-    }
-    if (pref === "negotiate") {
-      const outcome = await this.runNegotiate(task, agents);
-      return { id: this.id, strategy: "negotiate", ...outcome };
-    }
-    if (pref === "sequential") {
-      const outcome = await this.runSequential(task, agents);
-      return { id: this.id, strategy: "sequential", ...outcome };
-    }
-    let input = task;
     const history: HistoryEntry[] = [];
-    for (const a of agents) {
-      const entry: HistoryEntry = { agentId: a.id, input, timestamp: Date.now() };
+    let current = task;
+    const steps: { agentId: string; output: any }[] = [];
+
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i];
+      const entry: HistoryEntry = {
+        agentId: agent.id,
+        input: current,
+        timestamp: Date.now()
+      };
+
       try {
-        entry.output = await a.run(input, { mode: "hybrid-default" });
-        input = entry.output;
+        const output = await agent.run(current, {
+          mode: "hybrid-sequential",
+          step: i,
+          runOrchFramework
+        });
+        current = output;
+        entry.output = output;
+        steps.push({ agentId: agent.id, output });
       } catch (err) {
         entry.error = String(err);
       }
+
       history.push(entry);
     }
-    return { id: this.id, strategy: "centralised-default", result: input, history };
+
+    return { result: current, steps, history };
+  }
+
+  private async runNegotiate(task: any, agents: Agent[]) {
+    const history: HistoryEntry[] = [];
+
+    const scored = await Promise.all(
+      agents.map(async (agent) => {
+        let baseScore = 0.5;
+
+        try {
+          const proposal = (agent as any).propose
+            ? await (agent as any).propose(task)
+            : null;
+          if (proposal && typeof proposal.score === "number") {
+            baseScore = proposal.score;
+          }
+        } catch {
+          // ignore propose errors, agent just keeps default score
+        }
+
+        const costAdj =
+          typeof (agent as any).cost === "number"
+            ? 1 / (1 + (agent as any).cost)
+            : 0.5;
+
+        return {
+          agent,
+          score: (baseScore + costAdj) / 2
+        };
+      })
+    );
+
+    scored.sort((a, b) => b.score - a.score);
+    const winner = scored[0]?.agent;
+
+    let result: any = null;
+
+    if (winner) {
+      const entry: HistoryEntry = {
+        agentId: winner.id,
+        input: task,
+        timestamp: Date.now()
+      };
+
+      try {
+        result = await winner.run(task, {
+          mode: "hybrid-negotiate",
+          winner: winner.id,
+          ranking: scored.map((s) => ({
+            agentId: s.agent.id,
+            score: s.score
+          })),
+          runOrchFramework
+        });
+        entry.output = result;
+      } catch (err) {
+        entry.error = String(err);
+      }
+
+      history.push(entry);
+    }
+
+    return {
+      winner: winner?.id,
+      ranking: scored.map((s) => ({
+        agentId: s.agent.id,
+        score: s.score
+      })),
+      result,
+      history
+    };
+  }
+
+  async run(task: any, agents: Agent[]) {
+    if (!agents || agents.length === 0) {
+      throw new Error("HybridAdaptiveOrch requires at least one agent");
+    }
+
+    const start = Date.now();
+    const pref = (task?.strategy ?? task?.mode ?? "")
+      .toString()
+      .toLowerCase();
+
+    // 1) Prefer explicit user / task preference
+    if (pref === "concurrent" || agents.length >= 3) {
+      const { result, history } = await this.runConcurrent(task, agents);
+      return {
+        id: this.id,
+        strategy: "hybrid-concurrent",
+        duration: Date.now() - start,
+        result,
+        history
+      };
+    }
+
+    if (pref === "negotiate") {
+      const { winner, ranking, result, history } = await this.runNegotiate(
+        task,
+        agents
+      );
+      return {
+        id: this.id,
+        strategy: "hybrid-negotiate",
+        duration: Date.now() - start,
+        winner,
+        ranking,
+        result,
+        history
+      };
+    }
+
+    if (pref === "sequential") {
+      const { result, steps, history } = await this.runSequential(
+        task,
+        agents
+      );
+      return {
+        id: this.id,
+        strategy: "hybrid-sequential",
+        duration: Date.now() - start,
+        result,
+        steps,
+        history
+      };
+    }
+
+    // 2) Default: simple sequential pipeline (no extra semantics)
+    const history: HistoryEntry[] = [];
+    let current = task;
+
+    for (const agent of agents) {
+      const entry: HistoryEntry = {
+        agentId: agent.id,
+        input: current,
+        timestamp: Date.now()
+      };
+
+      try {
+        const output = await agent.run(current, {
+          mode: "hybrid-default",
+          runOrchFramework
+        });
+        current = output;
+        entry.output = output;
+      } catch (err) {
+        entry.error = String(err);
+      }
+
+      history.push(entry);
+    }
+
+    return {
+      id: this.id,
+      strategy: "hybrid-default",
+      duration: Date.now() - start,
+      result: current,
+      history
+    };
   }
 }
 
 export default HybridAdaptiveOrch;
+export { runOrchFramework };
