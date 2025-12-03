@@ -1,0 +1,233 @@
+# build_orchestration_config.yaml
+version: 1
+name: "Initialize orchestration + framework tooling (packages refactor)"
+description: >
+  Move orchestration types into /packages/, preserve existing templates, 
+  and inject configuration scaffolds. Adds framework tooling integration,
+  plus lib-level AgentBuilder and Orchestrator for runtime orchestration.
+
+changes:
+
+  - action: create_files
+    files:
+      lib/AgentBuilder.ts: |
+        import path from "path";
+        import fs from "fs-extra";
+
+        export async function buildAgent(agentId: string) {
+          const agentDir = path.resolve("agents", agentId);
+          const agentConfig = await import(path.join(agentDir, "config.ts")).then(m => m.default);
+
+          const orchDir = path.resolve("packages", agentConfig.default_orch);
+          const orchConfig = await import(path.join(orchDir, "config.ts")).then(m => m.default);
+          const orchModule = await import(path.join(orchDir, "index.ts"));
+
+          const OrchClass = orchModule.default;
+          const agent = new OrchClass({ ...orchConfig, ...agentConfig });
+          await agent.initialize?.();
+          return agent;
+        }
+
+      lib/Orchestrator.ts: |
+        export class Orchestrator {
+          constructor(config) {
+            this.config = config;
+          }
+
+          async initialize() {
+            const { loadFramework } = await import("../tools/frameworks/index.ts");
+            this.framework = await loadFramework(this.config.default_tooling);
+            await this.framework.init?.(this.config);
+          }
+
+          async run(query: string) {
+            return await this.framework.run(query, this.config);
+          }
+        }
+
+  - action: create_folders
+    folders:
+      - tools/frameworks/langchain
+      - tools/frameworks/langgraph
+      - tools/frameworks/crewai
+      - packages/orch-hierarchical
+      - packages/orch-shared-memory
+      - packages/orch-group-collaborative
+      - packages/orch-negotiate
+      - packages/orch-concurrent
+      - packages/orch-sequential
+      - packages/orch-centralised
+      - packages/orch-hybrid-adaptive
+
+  - action: create_files
+    files:
+      tools/frameworks/index.ts: |
+        export async function loadFramework(name: string) {
+          const map = {
+            langchain: () => import("./langchain/index.ts"),
+            langgraph: () => import("./langgraph/index.ts"),
+            crewai: () => import("./crewai/index.ts")
+          };
+          const mod = await map[name]?.();
+          if (!mod) throw new Error(`Framework ${name} not found`);
+          return mod.default;
+        }
+
+      tools/frameworks/langchain/index.ts: |
+        export default {
+          id: "langchain",
+          async init(config) {
+            console.log("LangChain initialized with", config.id);
+          },
+          async run(query, config) {
+            return { output: `LangChain result for ${query}` };
+          }
+        };
+
+      tools/frameworks/langgraph/index.ts: |
+        export default {
+          id: "langgraph",
+          async init(config) {
+            console.log("LangGraph initialized with", config.id);
+          },
+          async run(query, config) {
+            return { output: `LangGraph graph result for ${query}` };
+          }
+        };
+
+      tools/frameworks/crewai/index.ts: |
+        export default {
+          id: "crewai",
+          async init(config) {
+            console.log("CrewAI orchestration initialized with", config.id);
+          },
+          async run(query, config) {
+            return { output: `CrewAI collaborative output for ${query}` };
+          }
+        };
+
+  - action: add_files_if_missing
+    files:
+      packages/orch-hierarchical/config.ts: |
+        export default {
+          id: "orch-hierarchical",
+          description: "Planner–executor–reviewer orchestration",
+          default_tooling: "crewai",
+          supported_tooling: ["langgraph", "langchain"],
+          memory_model: "per-session",
+          evaluation_mode: "system",
+          node_roles: {
+            planner: "Breaks high-level tasks into subtasks",
+            executor: "Executes subtasks",
+            reviewer: "Validates and merges outputs"
+          }
+        };
+
+      packages/orch-shared-memory/config.ts: |
+        export default {
+          id: "orch-shared-memory",
+          description: "Shared memory orchestration for knowledge-insight agents",
+          default_tooling: "langgraph",
+          supported_tooling: ["langgraph", "langchain"],
+          memory_model: "shared",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-group-collaborative/config.ts: |
+        export default {
+          id: "orch-group-collaborative",
+          description: "Collaborative orchestration for creative multi-agent exchange",
+          default_tooling: "crewai",
+          supported_tooling: ["crewai", "langgraph"],
+          memory_model: "session-shared",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-negotiate/config.ts: |
+        export default {
+          id: "orch-negotiate",
+          description: "Negotiation-based orchestration for simulation and scenario agents",
+          default_tooling: "crewai",
+          supported_tooling: ["crewai", "langgraph"],
+          memory_model: "adaptive",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-concurrent/config.ts: |
+        export default {
+          id: "orch-concurrent",
+          description: "Parallel concurrent orchestration for data analysis/debugging",
+          default_tooling: "langgraph",
+          supported_tooling: ["langgraph", "langchain"],
+          memory_model: "per-session",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-sequential/config.ts: |
+        export default {
+          id: "orch-sequential",
+          description: "Step-based sequential orchestration for workflow assistant agents",
+          default_tooling: "langchain",
+          supported_tooling: ["langchain", "langgraph"],
+          memory_model: "per-session",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-centralised/config.ts: |
+        export default {
+          id: "orch-centralised",
+          description: "Central orchestrator pattern for educational tutor–learner loops",
+          default_tooling: "langchain",
+          supported_tooling: ["langchain", "langgraph"],
+          memory_model: "central",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+      packages/orch-hybrid-adaptive/config.ts: |
+        export default {
+          id: "orch-hybrid-adaptive",
+          description: "Adaptive orchestration for dev-infrastructure agents",
+          default_tooling: "langgraph",
+          supported_tooling: ["langgraph", "crewai", "langchain"],
+          memory_model: "dynamic",
+          evaluation_mode: "system",
+          node_roles: {}
+        };
+
+  - action: append_code
+    path: packages/**/index.ts
+    code: |
+             import { loadFramework } from "../../tools/frameworks/index.ts";
+
+      export async function runOrchFramework(query: string, config: any) {
+        const framework = await loadFramework(config.default_tooling);
+        await framework.init?.(config);
+        return await framework.run(query, config);
+      }
+
+  - action: modify_files
+    files:
+      agents/*/config.ts:
+        add_or_update: |
+          default_orch: "orch-hierarchical",
+          tooling: {
+            framework: "crewai",
+            options: ["langgraph", "langchain"]
+          },
+          evals: ["basic", "system"],
+          self_build: true
+
+  - action: info
+    message: |
+      ✅ Orchestration system refactor complete.
+      - All orch-types now live under /packages/
+      - Existing index.ts preserved; added framework hook
+      - Added config.ts for each orchestration type
+      - Framework loader & stubs created under /tools/frameworks/
+      - AgentBuilder + Orchestrator placed in /lib/

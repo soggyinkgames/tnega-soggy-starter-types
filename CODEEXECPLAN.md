@@ -1,14 +1,14 @@
 # Unify CLI, Orchestration, Evals, Memory, Tools — with Tests and Examples
 
-This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
-If PLANS.md exists in the repo, this plan must be maintained in accordance with it.
+This ExecPlan is a living document. The sections Progress, Surprises & Discoveries, Decision Log, and Outcomes & Retrospective must be kept up to date as work proceeds.
+If CODEEXECPLAN.md exists in the repo, this plan is the source of truth. Any prior PLANS.md content has been merged here.
 
 ## Purpose / Big Picture
 
 After implementing this plan, a developer can:
 - Use a single CLI to scaffold and run: agents, orchestrations, eval suites, memory backends, and tool plugins.
 - Run observable tests for each collection of work before moving on, with clear pass/fail gates.
-- Generate **example agents for all 8 agent types**, wire them to **all 8 orchestration patterns**, and run **evals** that are selected by the orchestration strategy and **memory type**.
+- Generate example agents for all 8 agent types, wire them to all 8 orchestration patterns, and run evals that are selected by the orchestration strategy and memory type.
 - Fine-tune tool plugins per agent, and verify integration via CLI-driven test scenarios.
 
 User-visible behavior:
@@ -23,23 +23,61 @@ User-visible behavior:
 
 ## Progress
 
-- [ ] (YYYY-MM-DD hh:mmZ) Create CLI foundation with subcommands: `new`, `test`, `run`.
-- [ ] Add scaffolds for: 8 agent examples, 8 orchestration patterns (already present), eval suites, memory backends, tool plugins.
-- [ ] Connect orchestration → eval selection (strategy decides eval type) and orchestration → memory selection.
-- [ ] Implement test harness with observable outputs and JSON artifacts.
+- [x] (2025-11-08 00:00Z) Create CLI foundation with subcommands: `new`, `test`, `run`.
+- [x] (2025-11-08 00:00Z) Add scaffolds for: 8 agent examples, 8 orchestration patterns (already present), eval suites, memory backends, tool plugins.
+- [x] (2025-11-08 00:00Z) Connect orchestration → eval selection (strategy decides eval type) and orchestration → memory selection.
+- [x] (2025-11-08 00:00Z) Implement test harness with observable outputs and JSON artifacts.
+- [x] (2025-11-26 00:00Z) Refactored orch-centralised and orch-concurrent specs to match controller delegation, per-index inputs, and error isolation.
 - [ ] Validate end-to-end on a sample scenario (e.g., “generate pitch deck”).
 - [ ] Document outcomes and finalize.
 
 ## Surprises & Discoveries
 
-- Observation: …
-  Evidence: …
+- Observation: CODEEXECPLAN.md previously showed encoding artifacts for em-dashes.
+  Evidence: occurrences of “â€”” in headings and lists.
+  Action: content reads correctly; normalize encoding in a follow-up if needed.
+
+- Observation: Existing scripts were unintentionally touched during an earlier pass.
+  Evidence: package.json duplicate script entries; modified scripts/new-agent.ts and scripts/run-agent.ts.
+  Action: Restored original scripts via checkout; ensured all new functionality is additive under new files only.
 
 ## Decision Log
 
-- Decision: …
-  Rationale: …
-  Date/Author: …
+- Decision: Use minimal custom argv parser for CLI instead of a dependency.
+  Rationale: Reduce dependencies and keep CLI simple.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Provide Redis/Supabase memory as stubs with graceful fallback to in-memory.
+  Rationale: Ensure tests pass without external services while keeping extension points.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Implement default orchestration→eval and orchestration→memory maps in `cli/commands/helpers/discover.ts`.
+  Rationale: Centralized selection logic with CLI overrides.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Preserve existing scripts; add new wrappers and tests under `/scripts` without renaming or replacing original commands.
+  Rationale: Non-invasive integration to avoid regressions while expanding capabilities.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Consolidate eval suites to existing `packages/eval-*` modules; remove duplicate `evals/*` implementations.
+  Rationale: Avoid duplication; align with repo’s existing eval packages.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Remove ad-hoc `/cli` prototype; keep helpers under `/scripts/helpers` and tests under `/scripts/*`.
+  Rationale: Reduce clutter and unused entrypoints; align with package.json scripts.
+  Date/Author: 2025-11-08 / codex
+
+- Decision: Use Vitest as the single source of truth for orchestration unit tests.
+  Action: Removed custom `scripts/test-orch.ts` runner; `test:orch` now runs `vitest` over `packages/orch-*/**/*.spec.ts`.
+  Rationale: Avoid duplication and keep tests colocated with code using best-practice filenames.
+  Date/Author: 2025-11-08 / codex
+  Follow-up: Adjusted npm script glob to `packages/orch-*/**/*.spec.ts` for predictable discovery across shells.
+  Update: Switched to dedicated `vitest.orch.config.ts` and script `vitest -c vitest.orch.config.ts run` to remove shell/glob ambiguity entirely.
+
+- Decision: Use Vitest as single source for tools unit tests.
+  Action: Added `vitest.tools.config.ts`, colocated tool specs, and updated `test:tools` to use the config.
+  Rationale: Remove custom runner duplication; ensure reliable discovery across environments.
+  Date/Author: 2025-11-08 / codex
 
 ## Outcomes & Retrospective
 
@@ -49,7 +87,7 @@ Summarize results, gaps, and lessons learned at completion.
 
 Repo areas relevant to this plan:
 
-    /agents/                       eight agent-type templates will live here:
+    /agents/
       1-knowledge-insight/
       2-strategy/
       3-creative-generation/
@@ -86,7 +124,6 @@ Repo areas relevant to this plan:
     /tools/
       search/
       codegen/
-      vision/
       types.ts                     Tool interface: name, run(spec, ctx)
 
     /cli/
@@ -107,158 +144,340 @@ Glossary (project-local):
 - “Memory type”: pluggable persistence used by agents and orch for context and history (in-memory, Redis, Supabase).
 - “Tool plugin”: capability invoked by agents (e.g., search, codegen); registered in `/tools`.
 
-## Plan of Work
+## Plan of Work & Concrete Steps (Codex-Ready, Self-Checking, Memory-Retaining)
 
-1) Create a single CLI entry that exposes “new”, “test”, and “run”.
-   - File: `/cli/index.ts` exports a `main(argv)`; wire npm script `npm run soggy -- <args>`.
-   - Subcommands in `/cli/commands/`:
-     - `new.ts` → interactive scaffolder for agent/orch/eval/memory/tool.
-     - `test.ts` → executes tests for any of the above, with pass/fail gates and JSON artifacts.
-     - `run.ts` → executes a scenario (task JSON) through chosen agent/orchestration with chosen eval+memory.
+This section replaces previous plans. It is idempotent, large-scope friendly, and requires no out-of-band explanation. Codex must treat this as the single source of truth and keep it updated as work proceeds.
 
-2) Scaffolds for all 8 **agent examples** (minimal but runnable).
-   - Each agent example provides:
-     - `index.ts` with `id`, `name`, `run(input, ctx)` and optional `respond`, `propose`.
-     - A small “tooling” example showing how to call one tool plugin.
-   - Provide seed tasks in `/agents/examples/tasks/*.json`.
+---
 
-3) Memory selection is determined by orchestration (default) but overridable via CLI.
-   - Map (default):
-     - orch-shared-memory → mem-inmemory
-     - orch-concurrent / orch-centralised / orch-sequential → mem-redis (if available) else mem-inmemory
-     - orch-negotiate / orch-hybrid-adaptive → mem-supabase (if configured) else mem-inmemory
-   - This map is centralized in `/cli/commands/helpers/discover.ts`.
+### 0) Ground Rules (for Codex and Humans)
 
-4) Eval selection depends on orchestration strategy, with CLI override.
-   - Map (default):
-     - sequential / centralised → `evals/basic`
-     - concurrent → `evals/system` (throughput & error tolerance)
-     - negotiate / hybrid-adaptive / group-collaborative → `evals/model-graded` (quality and consensus)
-   - Implement `EvalSuite` with `runEvalSuite(task, result, context) -> { scores, pass, notes }`.
+1. Never link an orchestration into scaffolds until all 8 orchestration packages have passing tests.
+2. All generation or edits must run self-checks and write artifacts under evals/logs/.
+3. Record any detected issues in CODEEXECPLAN_LOG.md under “Fuckups To Fix” and fail the step with a non-zero exit.
+4. Keep context memory local: this file (CODEEXECPLAN.md) + CODEEXECPLAN_LOG.md are the living memory. Update both.
+5. read the file and folder structure of this project and edit this `Current Repo Orientation` section accurately
 
-5) Tool plugins fine-tuning.
-   - Establish `Tool` interface in `/tools/types.ts`:
-       name: string; run(spec: any, ctx: any): Promise<any>
-   - Provide at least one tool per example agent (e.g., `tools/search/`, `tools/codegen/`).
-   - Agents accept `ctx.tools` and call `await ctx.tools.get('search').run({ query }, ctx)`.
+---
 
-6) Test harness and artifacts.
-   - `/cli/commands/test.ts` runs either:
-       a) component tests (unit): agents, tools, evals
-       b) scenario tests (integration): orch + agents + memory + eval
-   - Always emit:
-       - terminal table summary
-       - JSON artifact to `evals/logs/<timestamp>-<kind>.json`
-   - Exit non-zero on failure to gate progress.
+### 1) Current Repo Orientation (accurate)
 
-7) Minimal backend and placeholder frontend hooks (pre-integration).
-   - Backend: expose a file-based or in-memory API endpoint through a small Node script in `/backend/mini.ts` (optional).
-   - Frontend: prepare `/frontend/README.md` with how the dashboard will read `evals/logs/` for visualization later.
+    /templates/agent-types/          ← 8 base agent types (config.ts, index.ts, eval.ts, tools.ts)
+    /templates/orchestration/        ← orchestration templates (e.g., orch-centralised)
+    /agents/                         ← generated agents (base 8 plus new ones like kirsten, boou, boout)
+    /orchestrations/                 ← composed orchestration instances (e.g., here/, symphony/)
+    /packages/                       ← orchestration + eval packages
+        orch-centralised/
+        orch-hierarchical/
+        orch-shared-memory/
+        orch-negotiate/
+        orch-concurrent/
+        orch-sequential/
+        orch-group-collaborative/
+        orch-hybrid-adaptive/
+        eval-basic/
+        eval-modelgraded/            ← note naming matches folder
+        eval-regression/
+        eval-safety/
+        eval-system/
+        eval-types/                  ← shared EvalSuite typings and interfaces
+        memory/                      ← memory index for packages
+        index.ts, registry.ts, runOrchFramework.ts, types.ts
+    /evals/logs/                     ← runtime artifacts only (no eval source trees here)
+    /memory/                         ← memory backends
+      mem-inmemory/
+      mem-redis/                     ← optional until backend ready
+      mem-supabase/                  ← optional until backend ready
+      types.ts
+      config.ts                      ← maps memory “types” to backends
+    /tools/                          ← reusable micro-components
+      analyzeData/
+      codegen/
+      generateContent/
+      queryKnowledgeBase/
+      search/
+      summarize/
+      frameworks/                    ← orchestration frameworks
+      types.ts
+    /scripts/                        ← CLI UX scripts (Node+TS)
+      new-agent.ts
+      new-orchestration.ts
+      run-agent.ts
+      run-orchestration.ts
+      helpers/ (discover.ts, io.ts, load.ts, artifacts.ts)
+      tests/ (Vitest specs for CLI flows)
+    /vitest*.config.ts               ← dedicated configs for orch, tools, scripts
 
-## Concrete Steps
 
-1. Create CLI entry and npm scripts.
+Only /evals/logs/ exists for runtime artifacts; eval source lives under /packages/eval-*/.
+---
 
-    In package.json (root), add:
-      "scripts":
-        "soggy": "tsx ./cli/index.ts",
-        "orch:test": "tsx ./cli/index.ts test --type orch",
-        "agents:test": "tsx ./cli/index.ts test --type agent",
-        "evals:test": "tsx ./cli/index.ts test --type eval",
-        "tools:test": "tsx ./cli/index.ts test --type tool",
-        "memory:test": "tsx ./cli/index.ts test --type memory"
 
-    Create /cli/index.ts with argument parsing (yargs or minimal):
-      - parse subcommand: new | test | run
-      - delegate to /cli/commands/*.ts
+### 2) Package Scripts (top-level UX)
 
-    Create /cli/commands/new.ts:
-      - prompt: kind = agent|orch|eval|memory|tool
-      - generate from templates in /cli/templates/<kind>/
+In package.json add or update the following. Do not change names without updating this plan and scripts/README.md.
 
-    Create /cli/commands/test.ts:
-      - flags: --type, --pattern, --agent, --eval, --memory, --tool, --scenario
-      - load selection via /cli/commands/helpers/discover.ts
-      - execute and print a concise table (agentId, status, duration)
-      - write JSON artifact to evals/logs/
+    "scripts": {
+      "new-agent": "tsx ./scripts/new-agent.ts",
+      "run-agent": "tsx ./scripts/run-agent.ts",
+      "new-orchestration": "tsx ./scripts/new-orchestration.ts",
+      "run-orchestration": "tsx ./scripts/run-orchestration.ts",
+      "test:unit": "tsx ./scripts/test-unit.ts",
+      "test:specs": "tsx ./scripts/test-specs.ts",
+      "test:cli": "tsx ./scripts/test-cli.ts",
+      "test:tools": "tsx ./scripts/test-tools.ts",
+      "test:orch": "tsx ./scripts/test-orch.ts",
+      "test:all": "npm run test:unit && npm run test:specs && npm run test:cli && npm run test:tools && npm run test:orch"
+    }
 
-    Create /cli/commands/run.ts:
-      - flags: --pattern orch-*, --eval default|basic|system|model-graded, --memory mem-*, --scenario path/to/task.json
-      - run orchestrator with discovered agents and write outputs to evals/logs/
+Create or update /scripts/README.md with one-screen usage for each command and a list of flags. Every script must print a usage summary when run with --help.
 
-2. Provide agent examples.
+---
 
-    For each agent type under /agents/<folder>/index.ts:
-      - export const agent = { id, name, role, run(input, ctx) { … }, respond?(…), propose?(…) }
-      - inside run: optionally call a tool via ctx.tools, and return a small transform of input.
+### 3) Templates and Agents (correct placement)
 
-    Provide a small set of sample tasks under /agents/examples/tasks/:
-      - pitch-deck.json
-      - blog-post.json
-      - data-clean.json
+Rules:
+- The eight base agents remain in templates/agent-types/ (source of truth).
+- Generated agents are instantiated into /agents/<name>/ only.
+- Do not introduce an “agents catalog” folder; /agents/ is the catalog.
 
-3. Wire memory backends.
+Each template folder in templates/agent-types/* must contain:
+- config.ts      ← default metadata; includes defaults for eval, memory types, optional orchestration suggestion (not enforced)
+- index.ts       ← implements run(), optional respond(), propose()
+- eval.ts        ← imports an existing eval package (basic/system/model-graded); no new eval manager
+- tools.ts       ← imports micro-tools from /tools/*, not inline agent-specific logic
 
-    /memory/types.ts:
-      interface Memory {
-        getSession(userId: string): Promise<any>;
-        saveSession(userId: string, data: any): Promise<void>;
-        appendLongTerm(userId: string, summary: string): Promise<void>;
-      }
+---
 
-    Implement:
-      /memory/mem-inmemory/index.ts
-      /memory/mem-redis/index.ts
-      /memory/mem-supabase/index.ts
-    Ensure CLI `test --type memory` can run minimal CRUD validations.
+### 4) Tools Refactor (micro-components)
 
-4. Wire eval suites.
+Every agent feature must consume tools via /tools/* micro-components. Example shape:
 
-    /evals/types.ts:
-      interface EvalSuite {
-        id: string;
-        name: string;
-        runEvalSuite(task: any, result: any, context: any): Promise<{ scores: Record<string, number>, pass: boolean, notes?: string[] }>;
-      }
+    export async function runTool(spec: any, ctx: any): Promise<any> { ... }
 
-    Implement:
-      /evals/basic/index.ts
-      /evals/system/index.ts
-      /evals/model-graded/index.ts
+Examples already present or to be created:
+- /tools/queryKnowledgeBase/
+- /tools/analyzeData/
+- /tools/generateContent/
+- /tools/summarize/
+- /tools/search/
+- /tools/codegen/
 
-    In /cli/commands/helpers/discover.ts implement selection maps:
-      orch → default eval
-      orch → default memory
-    Allow CLI overrides with flags.
+Agents must import these rather than hardcoding bespoke tool logic.
 
-5. Tools.
+---
 
-    /tools/types.ts:
-      interface Tool { name: string; run(spec: any, ctx: any): Promise<any> }
+### 5) Memory Model (defaults now, richer later)
 
-    Implement minimal:
-      /tools/search/index.ts  → returns mock hits
-      /tools/codegen/index.ts → returns stub code block
+Memory backends:
+- Default backend: mem-inmemory (always present)
+- Optional: mem-redis, mem-supabase
 
-    Ensure `agents:test` invokes at least one tool call and asserts returned shape.
+Memory “types” (selected by orchestration or override):
+- short-term, working, episodic, long-term
 
-6. Test harness behavior (observable).
+In /memory/config.ts define mapping notes for later:
+- mem-inmemory → short-term, working (safe default)
+- mem-redis → working, episodic (low-latency shared)
+- mem-supabase → long-term, episodic (persistence)
 
-    Run examples:
-      npm run soggy -- test run --type orch --pattern orch-concurrent
-    Expect:
-      prints a table (agentId, status, duration)
-      writes evals/logs/<timestamp>-orch-concurrent.json
+An orchestration may pick one backend plus an array of memory types. If backend is unavailable, fallback to mem-inmemory and warn.
 
-    Run agents unit tests:
-      npm run agents:test
-    Expect:
-      prints OK for each agent example, writes logs.
+---
 
-    Run memory tests:
-      npm run memory:test
-    Expect:
-      set/get/append validated; writes logs.
+### 6) Discovery and Defaults (single source of truth)
+
+Implement /scripts/helpers/discover.ts to export:
+
+- discoverAgents(), discoverOrchestrations(), discoverEvals(), discoverMemory(), discoverTools()
+- defaultSelectionForOrch(orchId):
+    orch-shared-memory → mem-inmemory, evals/basic
+    orch-concurrent → mem-redis (if available) else mem-inmemory, evals/system
+    orch-centralised → mem-redis (if available) else mem-inmemory, evals/basic
+    orch-sequential → mem-redis (if available) else mem-inmemory, evals/basic
+    orch-negotiate → mem-supabase (if available) else mem-inmemory, evals/model-graded
+    orch-group-collaborative → mem-inmemory, evals/model-graded
+    orch-hybrid-adaptive → mem-supabase (if available) else mem-inmemory, evals/model-graded
+
+Flag precedence everywhere:
+- CLI flags > agent’s config defaults > orchestration defaults > discover.ts fallback
+
+---
+
+### 7) CLI: new-agent (no orchestration link until tests pass)
+
+Behavior of /scripts/new-agent.ts:
+- Prompt order: AGENTS → TOOLS → EVALS → MEMORY → (Orchestration is shown but disabled until orch tests pass)
+- Source lists:
+    Agents types from templates/agent-types/*
+    Tools from /tools/*
+    Evals from /evals/* (existing packages only)
+    Memory from /memory/* backends
+- Generate /agents/<name>/
+    Copy from selected template
+    Write /agents/<name>/config.json with:
+        { evalId, memory: { backend, types: [...] }, tools: [ ... ] }
+    Do not persist an orchestration link yet if any orch spec fails
+
+Artifacts:
+- evals/logs/<timestamp>-new-agent.json (choices, files created)
+- Update evals/logs/index.json
+
+Self-check:
+- Validate imports resolve; if not, log to CODEEXECPLAN_LOG.md and exit non-zero.
+
+---
+
+### 8) CLI: run-agent (agent-only execution)
+
+Behavior of /scripts/run-agent.ts:
+- Inputs: --agent <name>, optional --eval, --memory, --scenario path/to/task.json
+- Load /agents/<name>/config.json
+- Resolve final eval and memory via precedence rules
+- Execute agent.run() directly (no orchestration), with ctx.tools resolved
+- Write artifact: evals/logs/<timestamp>-run-agent.json
+- Run selected EvalSuite against result, append scores/pass to artifact
+- Exit non-zero on failure; append issues to CODEEXECPLAN_LOG.md
+
+---
+
+### 9) Orchestrations: testing first, then creation
+
+Step A — Specs for all 8 orch packages (must exist before linking in any wizard):
+- Each /packages/orch-*/ must have orch.spec.ts covering:
+    instantiation, run() happy-path, error capture, artifact structure (id, strategy, history)
+- Add script test-orch.ts to execute all orch specs and table results
+
+Only after Step A passes:
+
+Step B — CLI: new-orchestration (compose an orchestration instance)
+- /scripts/new-orchestration.ts:
+    Prompt name of orchestration instance
+    Prompt one of the 8 orchestration types (only if its spec is passing)
+    Select agents from /agents/
+    Select memory backend + types (pre-filled defaults from defaultSelectionForOrch)
+    Select eval suite (pre-filled from defaultSelectionForOrch)
+    Write /orchestrations/<name>/
+        config.json:
+            { orchId, agents: [..], evalId, memory: { backend, types: [...] } }
+        README.md: generated summary (how to run)
+
+Artifacts:
+- evals/logs/<timestamp>-new-orchestration.json
+
+Self-check:
+- Validate all imports and paths; otherwise log and fail
+
+---
+
+### 10) CLI: run-orchestration (execute composed instance)
+
+Behavior of /scripts/run-orchestration.ts:
+- Inputs: --name <orchestrationName>, optional overrides --eval --memory --scenario
+- Load /orchestrations/<name>/config.json
+- Resolve orchestrator from /packages/orch-*/
+- Resolve agent set from /agents/
+- Resolve memory and eval via precedence rules
+- Execute orchestrator.run(task, agents)
+- Execute EvalSuite on orchestration result
+- Artifact: evals/logs/<timestamp>-run-orchestration.json
+- Exit non-zero on failure, append issues to CODEEXECPLAN_LOG.md
+
+---
+
+### 11) Tests (unit, specs, tools, cli; independent/grouped/full)
+
+Minimum test placement:
+- Each CLI script in /scripts/* has a co-located test in /scripts/test-*.ts (or matching pattern inside tests/)
+- Each agent in /agents/<name>/<name>.spec.ts (created from template)
+- Each orchestration in /packages/orch-*/orch.spec.ts
+- Each tool in /tools/*/tool.spec.ts
+
+Runners:
+- npm run test:unit     ← light shape/contract tests
+- npm run test:specs    ← agents + orchestrations + evals specs
+- npm run test:cli      ← exercises new-agent, new-orchestration, run-* flows in dry-run or temp mode
+- npm run test:tools    ← executes micro-tools deterministically
+- npm run test:orch     ← focused orchestration behavior (throughput, error tolerance)
+- npm run test:all      ← the full suite; must be green before scaffolds link orchestration
+
+All runners:
+- Print concise tables (status, duration, failures)
+- Write JSON artifacts to evals/logs/
+- On any failure:
+    Append to CODEEXECPLAN_LOG.md under “Fuckups To Fix”
+    Exit non-zero
+
+---
+
+### 12) Validation Flow (corrected order; orchestration is separate)
+
+1. npm run new-agent
+    Produces agent and config with tools, eval, memory
+2. npm run run-agent -- --agent <name> [--scenario …]
+    Runs agent alone; evaluate and log artifacts
+3. npm run test:orch
+    Ensures 8 orchestration packages pass before linking anywhere
+4. npm run new-orchestration
+    Compose orchestration instance from passing orch types + chosen agents/memory/eval
+5. npm run run-orchestration -- --name <orchestrationName> [--scenario …]
+    Full run; evaluate and log artifacts
+6. npm run test:all
+    Gate for regressions; artifacts written; non-zero on failure
+
+---
+
+### 13) Self-Memory, Error Log, and Auto-QA
+
+Maintain /CODEEXECPLAN_LOG.md with these sections, updated by every script and test runner:
+
+    # CODEEXECPLAN Error & Fix Log
+
+    ## 🧨 Fuckups To Fix
+    - [ ] Placeholder for next issue
+
+    ## 🧩 Fixes Completed
+    - [x] Example fix with date and brief rationale
+
+    ## 🔁 Context Map
+    Agents ↔ Orchestrations ↔ Evals ↔ Memory ↔ Tools ↔ CLI Scripts
+
+Every CLI step ends with:
+- Validate graph consistency (files, ids, imports)
+- If errors: log entries into “Fuckups To Fix” and exit non-zero
+
+---
+
+### 14) Simple Daily Workflow (no re-explaining)
+
+From your editor terminal:
+
+    npm run new-agent
+    npm run run-agent -- --agent my-writer --scenario agents/examples/tasks/pitch-deck.json
+    npm run test:orch
+    npm run new-orchestration
+    npm run run-orchestration -- --name launch-proposal --scenario agents/examples/tasks/pitch-deck.json
+    npm run test:all
+
+Review artifacts in:
+- evals/logs/
+- CODEEXECPLAN_LOG.md
+
+If anything fails, fixes go to “Fuckups To Fix” automatically. After a fix, move items to “Fixes Completed”.
+
+---
+
+### 15) Acceptance
+
+- All 8 orchestration specs pass before any scaffold links them.
+- new-agent produces an agent with working tools/eval/memory and passes run-agent.
+- new-orchestration composes from existing pieces only; no eval manager introduced.
+- Tools are imported from /tools/* micro-components; no per-agent hardcoding.
+- test:all passes locally; artifacts exist and are readable.
+- CODEEXECPLAN_LOG.md reflects the latest issues/fixes and the cross-component context map.
+
+---
+
 
 ## Validation and Acceptance
 
@@ -348,3 +567,17 @@ If you follow the guidance above, a single, stateless agent — or a human novic
 ### Update Note
 Describe any changes made to this plan, the reason, and the date here. For example:
 - On 2025-11-06, tightened acceptance criteria to require JSON artifacts per run and added default orchestration→eval/memory maps.
+- On 2025-11-08, merged PLANS.md updates into this CODEEXECPLAN.md; marked initial milestones complete and recorded decisions.
+- On 2025-11-08, executed plan steps additively: added specs, tools, helpers, scripts, templates, and artifacts indexer; restored original scripts after accidental edits; documented decisions and surprises.
+- On 2025-11-08, removed duplicated eval implementations under `/evals/*` in favor of `packages/eval-*`; deleted unused `agents/again/*` and `lib/memory.ts` to reduce duplication.
+- On 2025-11-08, moved knowledge-insight query tool into shared `@tools/queryKnowledgeBase` and updated template re-export to use the shared tool.
+- On 2025-11-08, added orchestration templates under `templates/orchestration/*` and updated `scripts/new-orchestration.ts` to surface template use-cases. Added YAML prompts: `build_orchestration_templates.yaml` and `build_orchestration_config.yaml`.
+ - On 2025-11-08, added `inquirer` dependency and updated `scripts/new-agent.ts` to use it for the new goals-aware flow.
+- On 2025-11-08, added `vitest.orch.config.ts` and updated `test:orch` script to use the config for reliable test discovery.
+- On 2025-11-08, added `ui/codex-prompts/build_tools_tests.yaml`, `vitest.tools.config.ts`, and colocated tool specs; updated `test:tools` and removed `scripts/test-tools.ts` to avoid duplication.
+- On 2025-11-08, added scripts/tests/new-agent.spec.ts and scripts/tests/run-agent.spec.ts with dedicated Vitest config to validate CLI scaffolding and execution without modifying the CLI scripts.
+ - On 2025-11-08, removed unused helper `scripts/helpers/tools.ts` after confirming no references remained.
+- On 2025-11-08, removed the temporary `/cli` directory and ported helpers to `/scripts/helpers`; refactored orchestration unit tests with best-practice names and explicit assertions.
+ - On 2025-11-08, removed `scripts/test-orch.ts` to prevent duplication; updated package script to run Vitest on `packages/orch-*/**/*.spec.ts`.
+- On 2025-11-26, refactored `packages/orch-centralised/centralised.spec.ts` to cover new-agent creation via controller delegation and updated error-handling expectations.
+- On 2025-11-26, expanded `packages/orch-concurrent/concurrent.spec.ts` to assert per-index inputs, context wiring, duration, and error isolation.

@@ -1,0 +1,392 @@
+name: codex-new-agent-and-orch-goals
+description: >
+  Update new-agent flow (agent → orchestration → framework → goals) and add
+  goals.ts to every orchestration under /packages/orch-*. Existing index.ts are preserved.
+
+tasks:
+  # --- 1) Update the CLI to show goals with examples *after* choosing orchestration ---
+  - title: Update scripts/new-agent.ts to include goal/outcome/examples selection
+    files:
+      - path: scripts/new-agent.ts
+        action: replace
+        content: |
+          import fs from "fs-extra";
+          import path from "path";
+          import inquirer from "inquirer";
+
+          const orchMap = {
+            "knowledge-insight": { orch: "orch-shared-memory", framework: "langgraph" },
+            "strategy": { orch: "orch-hierarchical", framework: "crewai" },
+            "creative-generation": { orch: "orch-group-collaborative", framework: "crewai" },
+            "personal-workflow-assistant": { orch: "orch-sequential", framework: "langchain" },
+            "data-analyst-debugger": { orch: "orch-concurrent", framework: "langgraph" },
+            "simulation-scenario": { orch: "orch-negotiate", framework: "crewai" },
+            "educational": { orch: "orch-centralised", framework: "langchain" },
+            "dev-infrastructure": { orch: "orch-hybrid-adaptive", framework: "langgraph" },
+          };
+
+          async function createNewAgent() {
+            // 1) Pick agent type
+            const { agentType } = await inquirer.prompt([
+              { type: "list", name: "agentType", message: "Select agent type:", choices: Object.keys(orchMap) },
+            ]);
+
+            const { orch: defaultOrch } = orchMap[agentType];
+
+            // 2) Confirm or change orchestration
+            const { useDefaultOrch } = await inquirer.prompt([
+              { type: "confirm", name: "useDefaultOrch", message: `Use recommended orchestration (${defaultOrch})?`, default: true },
+            ]);
+
+            let orchType = defaultOrch;
+            if (!useDefaultOrch) {
+              const { orchSelection } = await inquirer.prompt([
+                { type: "list", name: "orchSelection", message: "Choose orchestration:", choices: Object.values(orchMap).map(o => o.orch) },
+              ]);
+              orchType = orchSelection;
+            }
+
+            // 3) Choose framework (after orchestration)
+            const orchConfig = (await import(path.resolve("packages", orchType, "config.ts"))).default;
+            let framework = orchConfig.default_tooling;
+            const { useDefaultFramework } = await inquirer.prompt([
+              { type: "confirm", name: "useDefaultFramework", message: `Use recommended framework (${framework})?`, default: true },
+            ]);
+            if (!useDefaultFramework) {
+              const { fwSelection } = await inquirer.prompt([
+                { type: "list", name: "fwSelection", message: "Choose from available frameworks:", choices: orchConfig.supported_tooling },
+              ]);
+              framework = fwSelection;
+            }
+
+            // 4) Load & display goals (with outcomes + 3 examples)
+            let goalData: any[] = [];
+            try {
+              const goalsModule = await import(path.resolve("packages", orchType, "goals.ts"));
+              goalData = goalsModule.goals || [];
+            } catch {
+              console.warn(`⚠️ No goals.ts found for ${orchType}`);
+            }
+
+            let selectedGoal: any = null;
+            if (goalData.length > 0) {
+              console.log("\nAvailable goals for this orchestration:\n");
+              for (const g of goalData) {
+                console.log(`🧭  ${g.name}: ${g.description}`);
+                console.log(`   → Outcomes: ${g.outcomes.join(", ")}`);
+                console.log("   → Example uses:");
+                (g.examples || []).forEach((ex: string) => console.log(`      - ${ex}`));
+                console.log("");
+              }
+
+              const { goalChoice } = await inquirer.prompt([
+                { type: "list", name: "goalChoice", message: "Select a goal for this agent:", choices: goalData.map(g => g.name) },
+              ]);
+              selectedGoal = goalData.find(g => g.name === goalChoice);
+            }
+
+            // 5) Preserve existing evals if present
+            const agentDir = path.resolve("agents", agentType);
+            await fs.ensureDir(agentDir);
+            const existingConfigPath = path.join(agentDir, "config.ts");
+            let existingEvals = ["basic"];
+            if (fs.existsSync(existingConfigPath)) {
+              try {
+                const oldCfg = (await import(existingConfigPath)).default;
+                if (oldCfg?.evals) existingEvals = oldCfg.evals;
+              } catch {}
+            }
+
+            // 6) Write the new agent config
+            const configText = `
+            export default {
+              id: "${agentType}",
+              default_orch: "${orchType}",
+              tooling: { framework: "${framework}" },
+              goals: ${selectedGoal ? JSON.stringify([selectedGoal.name]) : "[]"},
+              outcomes: ${selectedGoal ? JSON.stringify(selectedGoal.outcomes) : "[]"},
+              tools_needed: ${selectedGoal ? JSON.stringify(selectedGoal.recommendedTools) : "[]"},
+              evals: ${JSON.stringify(existingEvals)},
+              self_build: false
+            };
+            `;
+            await fs.writeFile(path.join(agentDir, "config.ts"), configText.trimStart(), "utf8");
+
+            console.log(`\n✅ Created agent "${agentType}" using ${orchType} (${framework})`);
+            if (selectedGoal) {
+              console.log(`🎯 Goal: ${selectedGoal.name}`);
+              console.log(`   Outcomes: ${selectedGoal.outcomes.join(", ")}`);
+            }
+          }
+
+          createNewAgent().catch(console.error);
+
+  # --- 2) Add goals.ts to every orchestration under /packages/orch-* (no index.ts overwrite) ---
+
+  - title: Add goals.ts for orch-hierarchical (quote, ROI, strategic planning)
+    files:
+      - path: packages/orch-hierarchical/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "build-buyer-quote",
+              description: "Assemble a detailed cost proposal with rationale and deliverables.",
+              suitedAgents: ["strategy", "data-analyst-debugger", "creative-generation", "dev-infrastructure"],
+              recommendedTools: ["analyzeData", "summarize", "generateContent", "formatReport"],
+              outcomes: ["pricing report", "narrative proposal", "exported PDF"],
+              examples: [
+                "Quote for hardware/materials including logistics and contingencies.",
+                "Custom game development estimate with phases and milestones.",
+                "Consulting service tiers with scope, assumptions, and timelines."
+              ]
+            },
+            {
+              name: "evaluate-investment-value",
+              description: "Compare alternatives and compute ROI to recommend the best option.",
+              suitedAgents: ["strategy", "data-analyst-debugger", "educational"],
+              recommendedTools: ["analyzeData", "formatReport", "summarize"],
+              outcomes: ["ROI matrix", "recommendation report"],
+              examples: [
+                "Assess ROI of upgrading GPUs or cloud instances.",
+                "Estimate benefits of staff training or certifications.",
+                "Compare tooling subscriptions by cost vs. productivity."
+              ]
+            },
+            {
+              name: "strategic-planning",
+              description: "Decompose long-term objectives into milestones and risks.",
+              suitedAgents: ["strategy", "dev-infrastructure"],
+              recommendedTools: ["analyzeData", "summarize", "planSubtasks"],
+              outcomes: ["structured plan", "timeline roadmap"],
+              examples: [
+                "Quarterly roadmap for a product team.",
+                "Architecture migration plan with milestones.",
+                "Studio content plan across multiple channels."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-shared-memory (itinerary & research)
+    files:
+      - path: packages/orch-shared-memory/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "plan-flight-itinerary",
+              description: "Collaboratively gather routes, constraints, and costs to build an itinerary.",
+              suitedAgents: ["knowledge-insight", "strategy", "creative-generation", "personal-workflow-assistant"],
+              recommendedTools: ["queryKnowledgeBase", "analyzeData", "summarize"],
+              outcomes: ["optimized travel route", "budget report", "itinerary summary"],
+              examples: [
+                "Sydney → Tokyo → Seoul multi-city itinerary with layovers.",
+                "Budget planning for flights + accommodation tiers.",
+                "Value comparison: shortest time vs. lowest cost."
+              ]
+            },
+            {
+              name: "collaborative-research",
+              description: "Aggregate sources, synthesize insights, and share a common cache.",
+              suitedAgents: ["knowledge-insight", "educational"],
+              recommendedTools: ["queryKnowledgeBase", "vectorSearch", "summarize"],
+              outcomes: ["source synthesis", "evidence-backed report"],
+              examples: [
+                "Summarize papers into a unified brief.",
+                "Market scan of competitors with citations.",
+                "Tech landscape overview with pros/cons."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-group-collaborative (creative)
+    files:
+      - path: packages/orch-group-collaborative/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "brainstorm-proposal",
+              description: "Generate multiple creative options and converge on the strongest.",
+              suitedAgents: ["creative-generation", "strategy"],
+              recommendedTools: ["generateContent", "combineIdeas", "summarize"],
+              outcomes: ["concept gallery", "shortlist & rationale"],
+              examples: [
+                "Campaign concepts across three audiences.",
+                "Narrative hooks and taglines for a trailer.",
+                "Visual moodboards with rationale text."
+              ]
+            },
+            {
+              name: "creative-brief",
+              description: "Draft a clear brief with objectives, tone, target, and deliverables.",
+              suitedAgents: ["creative-generation", "strategy"],
+              recommendedTools: ["generateContent", "summarize"],
+              outcomes: ["brief document", "acceptance criteria"],
+              examples: [
+                "Video brief for a 60s product spot.",
+                "Landing page copy brief with sections.",
+                "Character concept pack brief for artists."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-sequential (workflow)
+    files:
+      - path: packages/orch-sequential/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "onboarding-checklist",
+              description: "Create and execute a stepwise onboarding plan.",
+              suitedAgents: ["personal-workflow-assistant", "dev-infrastructure"],
+              recommendedTools: ["summarize", "scheduleEvents", "notifyUser"],
+              outcomes: ["task list", "calendar entries"],
+              examples: [
+                "New hire onboarding with day-by-day steps.",
+                "Tool installation checklist with links.",
+                "Project kick-off tasks with owners."
+              ]
+            },
+            {
+              name: "stepwise-execution",
+              description: "Execute a plan as a deterministic chain of steps.",
+              suitedAgents: ["personal-workflow-assistant"],
+              recommendedTools: ["summarize", "formatReport"],
+              outcomes: ["execution log", "summary report"],
+              examples: [
+                "Content publishing pipeline checklist.",
+                "Release checklist for a Unity build.",
+                "QA pass with recorded outcomes."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-concurrent (parallel analysis)
+    files:
+      - path: packages/orch-concurrent/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "parallel-benchmark",
+              description: "Run comparisons across options in parallel and merge results.",
+              suitedAgents: ["data-analyst-debugger", "dev-infrastructure"],
+              recommendedTools: ["analyzeData", "formatReport"],
+              outcomes: ["benchmark table", "ranked options"],
+              examples: [
+                "Compare LLM providers on latency/cost/quality.",
+                "GPU instance types across vendors.",
+                "Framework load times across configs."
+              ]
+            },
+            {
+              name: "multi-dataset-analysis",
+              description: "Analyze multiple datasets simultaneously and generate a combined finding.",
+              suitedAgents: ["data-analyst-debugger"],
+              recommendedTools: ["analyzeData", "summarize"],
+              outcomes: ["combined insights", "data appendix"],
+              examples: [
+                "User analytics + sales + support logs.",
+                "Repo activity + build timings + bug rates.",
+                "Market pricing + adoption + churn."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-centralised (education & summaries)
+    files:
+      - path: packages/orch-centralised/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "tutoring-session",
+              description: "Guide a learner through targeted instruction and practice.",
+              suitedAgents: ["educational", "knowledge-insight"],
+              recommendedTools: ["generateQuiz", "summarize", "explainTopic"],
+              outcomes: ["lesson plan", "practice items", "feedback notes"],
+              examples: [
+                "Explain cardiac physiology with spaced questions.",
+                "Anatomy ID drill with hints.",
+                "Review session for exam prep."
+              ]
+            },
+            {
+              name: "curriculum-plan",
+              description: "Build a modular curriculum with objectives and assessments.",
+              suitedAgents: ["educational", "strategy"],
+              recommendedTools: ["summarize", "generateContent"],
+              outcomes: ["curriculum outline", "assessment map"],
+              examples: [
+                "Module plan for med students (semester).",
+                "XR workshop series with learning outcomes.",
+                "Self-paced course plan with checkpoints."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-negotiate (debate/consensus)
+    files:
+      - path: packages/orch-negotiate/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "vendor-comparison",
+              description: "Agents debate vendors along criteria and converge on a choice.",
+              suitedAgents: ["strategy", "data-analyst-debugger"],
+              recommendedTools: ["analyzeData", "summarize"],
+              outcomes: ["scorecard", "consensus recommendation"],
+              examples: [
+                "Choose cloud provider for a new workload.",
+                "Select LMS vendor for school rollout.",
+                "Pick video hosting for streaming."
+              ]
+            },
+            {
+              name: "design-tradeoffs",
+              description: "Explore tradeoffs in architecture and resolve conflicts.",
+              suitedAgents: ["strategy", "dev-infrastructure"],
+              recommendedTools: ["analyzeData", "formatReport"],
+              outcomes: ["tradeoff matrix", "decision summary"],
+              examples: [
+                "URP vs HDRP pipeline selection.",
+                "Postgres vs managed vector store.",
+                "Serverless vs containerized runtime."
+              ]
+            }
+          ];
+
+  - title: Add goals.ts for orch-hybrid-adaptive (mixed modes)
+    files:
+      - path: packages/orch-hybrid-adaptive/goals.ts
+        action: create_if_missing
+        content: |
+          export const goals = [
+            {
+              name: "migration-plan",
+              description: "Combine planning, analysis, and execution logs across modes.",
+              suitedAgents: ["dev-infrastructure", "strategy"],
+              recommendedTools: ["analyzeData", "summarize", "formatReport"],
+              outcomes: ["phased plan", "risk register", "runbook"],
+              examples: [
+                "Monolith → services migration.",
+                "Database upgrade with rollback plan.",
+                "Shader pipeline modernization plan."
+              ]
+            },
+            {
+              name: "incident-postmortem",
+              description: "Collect evidence, analyze causes, and produce an actionable report.",
+              suitedAgents: ["dev-infrastructure", "data-analyst-debugger"],
+              recommendedTools: ["analyzeData", "summarize"],
+              outcomes: ["timeline", "root-cause", "action items"],
+              examples: [
+                "Failed build pipeline root-cause analysis.",
+                "XR performance regression investigation.",
+                "Outage postmortem with follow-ups."
+              ]
+            }
+          ];
