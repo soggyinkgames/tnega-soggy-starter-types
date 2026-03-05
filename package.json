@@ -11,7 +11,6 @@
     "test:watch": "vitest watch",
     "new-agent": "tsx scripts/new-agent.ts",
     "agent": "tsx scripts/run-agent.ts",
-    "test:tools": "tsx ./scripts/test-tools.ts",
     "test:tools": "vitest -c vitest.tools.config.ts run",
     "test:scripts": "vitest -c vitest.scripts.config.ts run",
     "test:orch": "vitest -c vitest.orch.config.ts run",
