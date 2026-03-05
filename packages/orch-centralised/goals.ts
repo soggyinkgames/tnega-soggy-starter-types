@@ -105,7 +105,29 @@ export const goals = [
       "Trigger a standard workflow that touches several systems.",
       "Record a run log for all actions taken on a request."
     ]
-  }
+  },
+  {
+    name: "project-plan",
+    description:
+      "Coordinate inputs from multiple domains into one coherent roadmap and task breakdown.",
+    suitedAgents: ["strategy", "personal-workflow-assistant", "dev-infrastructure"],
+    recommendedTools: [
+      "gatherRequirements",
+      "generatePlan",
+      "estimateEffort",
+      "createTaskList"
+    ],
+    outcomes: [
+      "milestone roadmap",
+      "task backlog",
+      "dependency map"
+    ],
+    examples: [
+      "Plan a 6-month VR training production schedule.",
+      "Plan refactor + infra upgrades around a release window.",
+      "Draft a roadmap for launching an AI agent product."
+    ]
+  },
   //   name: "single-owner-briefing",
   //   description:
   //     "One owner agent gathers information from many sources and delivers a concise brief.",
