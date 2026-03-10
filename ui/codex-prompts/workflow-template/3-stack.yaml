@@ -1,0 +1,41 @@
+# stack.yml
+version: 1
+id: "<stack-profile-id>"
+title: "<short-human-title>"
+
+stack:
+  language: "<typescript|python|go|rust|other>"
+  runtime: "<node|python|bun|deno|none|other>"
+  module_system: "<esm|cjs|python-package|other>"
+  typing: "<static|gradual|dynamic>"
+  config_style: "<ts|json|yaml|py|toml>"
+  test_framework: "<vitest|jest|pytest|unittest|other>"
+  linter: "<eslint|ruff|flake8|none|other>"
+  formatter: "<prettier|black|ruff-format|none|other>"
+  package_manager: "<pnpm|npm|yarn|uv|pip|poetry|cargo|other>"
+
+repo:
+  source_root: "<src>"
+  test_root: "<tests>"
+  scripts_root: "<scripts-or-empty>"
+  path_style: "<relative|alias-based|package-based>"
+  import_policy: "<static-only|dynamic-allowed>"
+  naming:
+    files: "<kebab-case|snake_case|pascal-case|other>"
+    symbols: "<camelCase|snake_case|PascalCase|other>"
+
+implementation_defaults:
+  error_strategy: "<throw|raise|return-result|explicit-error-object>"
+  generation_style: "<template-copy|manual-assembly|codegen>"
+  dependency_policy: "<no-new-deps-by-default|explicit-approval-required|other>"
+  test_policy: "<add-tests-for-all-changes|targeted-tests-only|other>"
+
+commands:
+  install: "<command-or-empty>"
+  typecheck: "<command-or-empty>"
+  test: "<command>"
+  lint: "<command-or-empty>"
+  format: "<command-or-empty>"
+
+notes:
+  - "<optional stack clarification>"
