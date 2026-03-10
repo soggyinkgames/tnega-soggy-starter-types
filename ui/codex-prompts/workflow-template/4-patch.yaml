@@ -1,0 +1,51 @@
+# patch.yml
+version: 1
+id: "<patch-id>"
+task_ref: "<task-id>"
+stack_ref: "<stack-id>"
+rules_ref: "<ruleset-id>"
+
+summary: >
+  <brief repo-specific implementation plan>
+
+scope:
+  allow_edit:
+    - "<allowed file or glob>"
+    - "<allowed file or glob>"
+  deny_edit:
+    - "<forbidden file or glob>"
+    - "<forbidden file or glob>"
+
+preconditions:
+  - "<must already exist or be true before patch>"
+  - "<must already exist or be true before patch>"
+
+plan:
+  - file: "<path>"
+    action: "<create|update|delete>"
+    purpose: "<why this file changes>"
+    linked_acceptance:
+      - "<acceptance item>"
+      - "<acceptance item>"
+
+  - file: "<path>"
+    action: "<create|update|delete>"
+    purpose: "<why this file changes>"
+    linked_acceptance:
+      - "<acceptance item>"
+
+implementation_notes:
+  - "<repo-specific constraint>"
+  - "<repo-specific constraint>"
+
+risks:
+  - "<known implementation risk>"
+  - "<known implementation risk>"
+
+stop_conditions:
+  - "<condition that requires stopping instead of guessing>"
+  - "<condition that requires stopping instead of guessing>"
+
+postconditions:
+  - "<what must be true after patch>"
+  - "<what must be true after patch>"

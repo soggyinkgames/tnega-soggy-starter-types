@@ -1,0 +1,50 @@
+# verify.yml
+version: 1
+id: "<verify-id>"
+task_ref: "<task-id>"
+stack_ref: "<stack-id>"
+rules_ref: "<ruleset-id>"
+
+purpose: >
+  <how success is proven for this task in this stack>
+
+checks:
+  structural:
+    - "<file/module structure condition>"
+    - "<public contract condition>"
+
+  behavioral:
+    - "<required behavior condition>"
+    - "<forbidden behavior blocked condition>"
+
+  regression:
+    - "<existing valid path still works>"
+    - "<known bug remains fixed>"
+
+tests:
+  required_cases:
+    - id: "<case-id>"
+      kind: "<happy|edge|invalid|regression>"
+      description: "<what is being tested>"
+      assertion: "<what must be true>"
+
+    - id: "<case-id>"
+      kind: "<happy|edge|invalid|regression>"
+      description: "<what is being tested>"
+      assertion: "<what must be true>"
+
+commands:
+  - "<typecheck command if any>"
+  - "<test command>"
+  - "<lint command if any>"
+
+pass_criteria:
+  - "<condition required for approval>"
+  - "<condition required for approval>"
+
+fail_if:
+  - "<condition that rejects the patch>"
+  - "<condition that rejects the patch>"
+
+notes:
+  - "<optional verification clarification>"
