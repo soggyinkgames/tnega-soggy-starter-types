@@ -1,0 +1,90 @@
+# verify.yml
+version: 1
+id: "tool-catalog-v1-verify"
+task_ref: "tool-catalog-v1"
+stack_ref: "ts-node-vitest"
+rules_ref: "tooling-global-rules-v1"
+
+purpose: >
+  Prove that the canonical tooling contract is correctly implemented in the
+  current TypeScript Node repo, with deterministic resolution, controlled
+  categories, explicit failure for unknown tool ids, and protection against
+  future drift.
+
+checks:
+  structural:
+    - "Canonical tooling types exist for tool definitions and controlled categories"
+    - "A canonical tool catalog exists as the source of truth"
+    - "A resolver exists for deterministic lookup by tool id"
+    - "Directly related tooling tests exist"
+
+  behavioral:
+    - "Known tool ids resolve successfully"
+    - "Unknown tool ids are rejected explicitly"
+    - "Multiple tool ids resolve in deterministic order"
+    - "Accepted tool definitions use only controlled category values"
+    - "Accepted tool definitions do not contain duplicate ids"
+
+  protection:
+    - "Existing valid tool lookups still resolve after the change"
+    - "Unknown tool ids are not silently aliased or accepted"
+    - "Catalog integrity checks prevent duplicate ids"
+    - "Resolution order does not vary between runs"
+
+tests:
+  required_cases:
+    - id: "catalog-has-unique-tool-ids"
+      kind: "protection"
+      protection_type: "invariant"
+      description: "The canonical tool catalog does not permit duplicate tool ids"
+      assertion: "All accepted tool definitions have unique ids"
+
+    - id: "catalog-uses-controlled-categories"
+      kind: "protection"
+      protection_type: "invariant"
+      description: "The canonical tool catalog uses only controlled category values"
+      assertion: "Every accepted tool definition category belongs to the controlled category set"
+
+    - id: "resolver-returns-known-tool"
+      kind: "happy"
+      description: "A known tool id resolves to its canonical tool definition"
+      assertion: "Resolving a known tool id returns the matching canonical definition"
+
+    - id: "resolver-rejects-unknown-tool"
+      kind: "invalid"
+      description: "An unknown tool id fails explicitly"
+      assertion: "Resolving an unknown tool id throws or returns an explicit error according to stack rules"
+
+    - id: "resolver-preserves-input-order"
+      kind: "edge"
+      description: "Resolving multiple valid tool ids preserves deterministic order"
+      assertion: "Resolved tool collection order matches the defined deterministic contract"
+
+    - id: "resolver-does-not-return-duplicates"
+      kind: "protection"
+      protection_type: "behavior"
+      description: "Resolving tool ids does not produce duplicate tool definitions"
+      assertion: "Resolved output contains no duplicate tool ids"
+
+commands:
+  - "npm run typecheck"
+  - "npm run test -- tests/tools"
+  - "npm run lint"
+
+pass_criteria:
+  - "All required checks pass"
+  - "All required test cases pass"
+  - "No files outside approved scope are required to satisfy verification"
+  - "No new dependency is needed for the implementation to pass"
+
+fail_if:
+  - "A known tool id cannot be resolved deterministically"
+  - "An unknown tool id is accepted silently"
+  - "Duplicate tool ids exist in the accepted catalog"
+  - "A tool category is outside the controlled set"
+  - "Verification requires unrelated architectural changes"
+  - "Tests are missing for required tooling behavior"
+
+notes:
+  - "Use protection cases to guard important behavior, invariants, output correctness, performance, or safety from future drift"
+  - "Do not use the term regression as a primary case kind in this system"

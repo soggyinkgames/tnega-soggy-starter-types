@@ -1,0 +1,59 @@
+# rules.yml
+version: 1
+id: "tooling-global-rules-v1"
+title: "Global engineering rules for tooling work"
+
+purpose: >
+  Define permanent engineering rules for tooling tasks so implementation stays deterministic,
+  scoped, reconstructable, and safe to port across stacks.
+
+applies_to:
+  tasks:
+    - "tool-catalog-v1"
+    - "tool-resolver-v1"
+    - "tool-registry-v1"
+  stacks:
+    - "*"
+
+rules:
+  scope:
+    - "Edit only files explicitly allowed by the active patch file"
+    - "Do not broaden scope beyond tool definitions, tool registry, resolver behavior, and directly related tests"
+
+  architecture:
+    - "Preserve stable tool ids and canonical tool definitions"
+    - "Do not redesign orchestration, agent runtime, eval architecture, or CLI flow during tooling work"
+
+  dependencies:
+    - "Do not add new dependencies unless explicitly requested"
+    - "Do not introduce prompt libraries, runtime loaders, or dynamic import based discovery as part of tooling work"
+
+  behavior:
+    - "Tool resolution must be deterministic"
+    - "Unknown tool ids must fail explicitly rather than silently falling back"
+    - "Prefer the smallest correct diff that satisfies the task contract"
+
+  testing:
+    - "Every new or changed tooling rule must have test coverage"
+    - " tests must protect against duplicate ids, invalid categories, and nondeterministic resolution"
+
+  safety:
+    - "Do not delete existing working code unless an equivalent verified replacement is provided"
+    - "Do not modify config, templates, or generated files outside approved scope"
+
+forbidden:
+  - "Do not silently alias unknown or invalid tool ids"
+  - "Do not use free-form uncontrolled category values"
+
+review_gates:
+  - "All changed files are within approved scope"
+  - "No new dependency was added"
+  - "Tool ids remain unique"
+  - "Categories remain controlled"
+  - "Resolver behavior is deterministic"
+  - "Tests cover required tooling behavior"
+  - "No unrelated subsystem was refactored"
+
+notes:
+  - "These rules are stack-agnostic and should survive migration between TypeScript, Python, or other implementations"
+  - "Repo-specific commands and file paths belong in stack.yml, patch.yml, and verify.yml"
