@@ -46,7 +46,7 @@ import { DEFAULT_EVALS } from "lib/defaultEvals";
 type OrchConfig = {
     id: string;
     description?: string;
-    supported_tooling: string[];
+    supported_framework: string[];
     default_tooling: string;
     compatible_agent_types?: string[];
     recommended_for?: Record<string, boolean>;
@@ -1116,7 +1116,7 @@ async function run() {
         existingAgentConfig?.tooling?.framework ??
         recommendedFramework;
 
-    if (!orchestration.supported_tooling.includes(prefilledFramework)) {
+    if (!orchestration.supported_framework.includes(prefilledFramework)) {
         throw new Error(
             `Framework "${prefilledFramework}" is not supported by orchestration "${orchestration.id}".`
         );
@@ -1126,7 +1126,7 @@ async function run() {
         sectionLabel: "Framework",
         currentValue: prefilledFramework,
         recommendedValue: recommendedFramework,
-        choices: orchestration.supported_tooling,
+        choices: orchestration.supported_framework,
         why: `Supported by orchestration "${orchestration.id}".`,
         nonInteractive,
     });

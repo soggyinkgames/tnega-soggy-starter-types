@@ -2,7 +2,7 @@ export default {
   id: "orch-hierarchical",
   description: "Planner–executor–reviewer orchestration",
   default_tooling: "crewai",
-  supported_tooling: ["langgraph", "langchain"],
+  supported_framework: ["langgraph", "langchain"],
   memory_model: "per-session",
   evaluation_mode: "system",
   node_roles: {

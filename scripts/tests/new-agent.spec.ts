@@ -29,7 +29,7 @@ describe("new-agent integration", () => {
 export default {
     id: "orch-sequential",
     description: "Sequential orchestration for focused agents.",
-    supported_tooling: ["langgraph", "custom-runtime"],
+    supported_framework: ["langgraph", "custom-runtime"],
     default_tooling: "langgraph",
     compatible_agent_types: ["knowledge-insight", "strategy"],
     recommended_for: {
@@ -92,7 +92,7 @@ export async function getRecommendedTools(goalName, runtime) {
 export default {
     id: "orch-hierarchical",
     description: "Hierarchical coordination.",
-    supported_tooling: ["crewai", "custom-runtime"],
+    supported_framework: ["crewai", "custom-runtime"],
     default_tooling: "crewai",
     compatible_agent_types: ["strategy", "dev-infrastructure"],
     recommended_for: {

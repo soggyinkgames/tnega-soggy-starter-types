@@ -54,7 +54,7 @@ tasks:
             ]);
             if (!useDefaultFramework) {
               const { fwSelection } = await inquirer.prompt([
-                { type: "list", name: "fwSelection", message: "Choose from available frameworks:", choices: orchConfig.supported_tooling },
+                { type: "list", name: "fwSelection", message: "Choose from available frameworks:", choices: orchConfig.supported_framework },
               ]);
               framework = fwSelection;
             }
