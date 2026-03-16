@@ -30,7 +30,7 @@ export default {
     id: "orch-sequential",
     description: "Sequential orchestration for focused agents.",
     supported_framework: ["langgraph", "custom-runtime"],
-    default_tooling: "langgraph",
+    default_framework: "langgraph",
     compatible_agent_types: ["knowledge-insight", "strategy"],
     recommended_for: {
         "knowledge-insight": true
@@ -93,7 +93,7 @@ export default {
     id: "orch-hierarchical",
     description: "Hierarchical coordination.",
     supported_framework: ["crewai", "custom-runtime"],
-    default_tooling: "crewai",
+    default_framework: "crewai",
     compatible_agent_types: ["strategy", "dev-infrastructure"],
     recommended_for: {
         "strategy": true

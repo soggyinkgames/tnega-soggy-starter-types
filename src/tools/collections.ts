@@ -14,14 +14,14 @@ export function frameworkToolId(tooling: string): string {
  * Currently limited to framework tooling plus any explicit tool_ids provided.
  */
 export function toolIdsForOrchestration(config: {
-  default_tooling?: string;
+  default_framework?: string;
   tool_ids?: string[];
   tools?: string[];
 }): string[] {
   const ids: string[] = [];
 
-  if (config?.default_tooling) {
-    ids.push(frameworkToolId(config.default_tooling));
+  if (config?.default_framework) {
+    ids.push(frameworkToolId(config.default_framework));
   }
 
   const extras = config?.tool_ids ?? config?.tools ?? [];
@@ -35,7 +35,7 @@ export function toolIdsForOrchestration(config: {
  * Throws if any tool id is unknown.
  */
 export function resolveToolCollectionForOrchestration(config: {
-  default_tooling?: string;
+  default_framework?: string;
   tool_ids?: string[];
   tools?: string[];
 }): ToolDefinition[] {

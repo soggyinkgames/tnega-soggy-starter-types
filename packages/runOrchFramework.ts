@@ -2,7 +2,7 @@ import { resolveFrameworkTool } from "../src/tools/collections";
 import { loadFramework } from "../tools/frameworks/index";
 
 type OrchConfig = {
-  default_tooling?: string;
+  default_framework?: string;
   [key: string]: any;
 };
 
@@ -12,7 +12,7 @@ type OrchConfig = {
  * behind this function without changing orchestration callers.
  */
 export async function runOrchFramework(query: any, config: OrchConfig = {}) {
-  const tooling = config.default_tooling ?? "langgraph";
+  const tooling = config.default_framework ?? "langgraph";
 
   // Validate that the framework tooling is registered in the catalog
   resolveFrameworkTool(tooling);

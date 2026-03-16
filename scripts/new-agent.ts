@@ -47,7 +47,7 @@ type OrchConfig = {
     id: string;
     description?: string;
     supported_framework: string[];
-    default_tooling: string;
+    default_framework: string;
     compatible_agent_types?: string[];
     recommended_for?: Record<string, boolean>;
     memory?: {
@@ -1110,7 +1110,7 @@ async function run() {
      * ------------------------------------------------------------------------
      */
 
-    const recommendedFramework = orchestration.default_tooling;
+    const recommendedFramework = orchestration.default_framework;
     const prefilledFramework =
         args.framework ??
         existingAgentConfig?.tooling?.framework ??

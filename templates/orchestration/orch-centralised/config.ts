@@ -1,7 +1,7 @@
 export default {
   id: "orch-centralised",
   description: "Central orchestrator pattern for educational tutor–learner loops",
-  default_tooling: "langchain",
+  default_framework: "langchain",
   supported_framework: ["langchain", "langgraph"],
   memory_model: "central",
   evaluation_mode: "system",
