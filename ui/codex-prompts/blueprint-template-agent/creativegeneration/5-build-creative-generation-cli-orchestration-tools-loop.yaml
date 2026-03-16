@@ -1,0 +1,254 @@
+task: "build-creative-generation-cli-orchestration-tools-loop"
+
+goal: >
+  Build the missing system parts needed to make `creative-generation` a real,
+  adaptable first-class agent type in the starter: `new-agent` must scaffold it
+  correctly, the scaffolded config must declare the creative mode and the
+  orchestration-facing information needed for variation, sequential orchestration
+  must select the correct tool collections for the requested creative mode and
+  goal profile, the required creative-generation tools must be implemented and
+  reachable from `src/tools`, and the current execution path must be able to
+  resolve and run them end-to-end with tests.
+
+success_criteria:
+  - "`new-agent` supports `creative-generation` as a real selectable agent type"
+  - "the creative-generation template scaffolds the correct files and explicit config for orchestration consumption"
+  - "the scaffolded config supports adaptability by declaring the creative mode and goal profile without coupling those declarations to concrete tool ids"
+  - "sequential orchestration maps creative-generation goal profiles and creative modes to the correct tool collections"
+  - "the required creative-generation tools exist in `src/tools` and are reachable by stable ids"
+  - "tool collections resolve deterministically to the required tool ids"
+  - "the current execution path resolves selected tools from `src/tools` and executes them through shared contracts"
+  - "an end-to-end integration path proves the loop works from scaffolded creative-generation agent config through sequential orchestration and local tool execution"
+  - "tests pass"
+  - "typecheck passes"
+  - "no unrelated files changed"
+
+context:
+  subsystem: "CLI scaffolding, agent config, sequential orchestration, local tools, and execution path"
+  important_existing_files:
+    - "the `new-agent` CLI flow and its agent-type registration or selection logic"
+    - "existing agent templates and any shared template helper files"
+    - "the creative-generation template files and schema draft, if already present"
+    - "the sequential orchestration package and its goal-profile or use-case selection flow"
+    - "the current tool selection, tool resolution, and execution path"
+    - "`src/tools/**` and any current local tool lookup or catalog code"
+    - "shared agent, orchestration, and tool contracts already used by the project"
+    - "existing tests covering agent generation, orchestration, tools, or execution"
+  current_constraint: >
+    This work must close the loop using the current system shape rather than
+    inventing a parallel architecture. The CLI must scaffold the agent type, the
+    config must feed orchestration, orchestration must choose the tools,
+    `src/tools` must define and expose those tools locally for now, and the
+    existing execution path must run them. Build the maximum amount of real code
+    needed now, but do not add unused framework structure that is not exercised
+    by the current flow.
+
+hard_constraints:
+  - "edit only files required in `new-agent`, creative-generation template files, sequential orchestration, `src/tools`, minimal shared compatibility points, and directly related tests"
+  - "do not add dependencies"
+  - "do not broaden architecture"
+  - "preserve existing public contracts unless a minimal compatibility fix is strictly required to close the loop"
+  - "add or update tests for changed behavior"
+  - "prefer building real exercised code over placeholder abstractions"
+  - "do not create speculative subsystem folders or unused framework layers unless the existing codebase already uses them"
+
+non_goals:
+  - "do not extract tools into an API yet"
+  - "do not redesign all orchestration patterns; only complete the current sequential path"
+  - "do not refactor unrelated agent types or templates beyond minimal compatibility work"
+  - "do not invent auto-discovery systems if the project does not already use them"
+  - "do not build placeholder tools that are never selected or executed by the current flow"
+
+instructions:
+  - >
+    First inspect the existing code and identify the full current path from
+    `new-agent` scaffold generation to agent config, from config into sequential
+    orchestration, from orchestration into tool selection, from tool selection
+    into `src/tools`, and from there into the current execution path. Find the
+    exact missing pieces and broken handoff points before making changes.
+  - >
+    Treat this as one connected system, not separate tickets. The work is only
+    complete when the scaffolded creative-generation agent can participate in the
+    real flow end-to-end.
+  - >
+    Make `creative-generation` a first-class `new-agent` type by following the
+    same conventions used for existing agent types. Do not create a special-case
+    generation path if the current generator already has a pattern for agent-type
+    registration and template selection.
+  - >
+    Structure the creative-generation template so the scaffolded output provides
+    the information orchestration needs via explicit config. Do not rely on file
+    paths, naming tricks, or hidden inference where explicit metadata is more stable.
+  - >
+    The scaffolded config must declare the minimum stable orchestration-facing
+    information required to continue the loop. Use explicit keys and preserve
+    them through generation and execution flow. The config must include:
+    `id`, `agentType`, `defaultOrchestration`, `goalProfile`, `creativeMode`,
+    and `toolCollections`.
+  - >
+    Use this config shape unless the existing codebase already has an equivalent
+    stable convention that must be preserved:
+    `{ id: string; agentType: "creative-generation"; defaultOrchestration: "sequential"; goalProfile: string; creativeMode: string; toolCollections: string[]; }`
+  - >
+    Use `agentType: "creative-generation"` and `defaultOrchestration: "sequential"`
+    unless the existing codebase already has an equivalent stable naming convention
+    that must be preserved.
+  - >
+    Use `creativeMode` as the declarative variability field for this agent type.
+    This field represents the kind of creative work the scaffolded agent is for,
+    such as line art, music, image, copy, or other future modes. `creativeMode`
+    is not a tool id and is not a tool collection. It is the stable declaration
+    that allows the CLI to scaffold meaningful variations of the same agent type.
+  - >
+    The creative-generation template must be adaptable. `new-agent` should be able
+    to scaffold creative-generation agents that differ by `creativeMode` without
+    changing the overall architecture. Build the template so the mode is part of
+    the generated config, and so orchestration can use it to choose the right
+    tool collections for that variation.
+  - >
+    The initial creative-generation template must at minimum support meaningful
+    variation through `creativeMode`. Examples include `line-art` and `music`,
+    but do not hardcode the architecture so only those two modes can ever exist.
+    Preserve the ability to add more modes later without refactoring the core contract.
+  - >
+    Use `goalProfile` as the orchestration selection input paired with
+    `creativeMode`. The selection chain must be:
+    scaffolded agent config -> (`goalProfile` + `creativeMode`) -> tool collection -> tool ids.
+    Do not select raw implementations directly from the generated agent.
+  - >
+    Use tool collections as the orchestration selection boundary. `toolCollections`
+    is declarative generated config and may contain one or more collection names
+    that the agent variation is compatible with, but sequential orchestration
+    remains the owner of deciding what collection is used for a given run.
+  - >
+    Define an explicit initial collection named `creative-generation-core`.
+    This collection must resolve to these required tool ids:
+    `creative.parse-brief`,
+    `creative.normalize-references`,
+    `creative.apply-constraints`,
+    `creative.compose-output`.
+  - >
+    Define the required creative-generation tools in `src/tools` now. They do not
+    exist yet, so create the minimum real set needed to prove the loop. Each tool
+    must be reachable by a stable id and implement the current shared tool
+    contract used by the project.
+  - >
+    The first concrete creative-generation tools must do real useful work that
+    supports adaptable creative modes:
+    `creative.parse-brief` -> normalize and validate raw brief input into the expected internal shape,
+    `creative.normalize-references` -> normalize optional references into a stable structured form,
+    `creative.apply-constraints` -> merge and normalize style, mood, theme, format, and related constraints,
+    `creative.compose-output` -> assemble the final creative-generation output shape from prior tool results.
+  - >
+    Build these as real local tools, not stubs. They do not need to call external
+    providers yet, but they must perform the actual local transformations needed
+    to prove the system loop and support multiple `creativeMode` variations through
+    shared pre-generation preparation steps.
+  - >
+    Sequential orchestration must own runtime selection of tools for the current
+    use case. Implement or fix the mapping from (`goalProfile` + `creativeMode`)
+    to `creative-generation-core`, using the narrowest model that fits the existing
+    code. Preserve the existing sequential ownership model.
+  - >
+    Design the selection logic so future creative modes can later map to different
+    collections such as `creative-line-art-core` or `creative-music-core` without
+    refactoring the core contract introduced now. Do not implement those future
+    collections unless they are required to close the current loop.
+  - >
+    Prefer a simple local tools shape that matches the existing codebase over a
+    generalized framework layout. Avoid introducing new folders such as separate
+    registry or contracts subsystems unless those ownership boundaries already
+    exist in the project and are actually used by the current flow.
+  - >
+    Ensure there is one clear, stable lookup path from orchestration-selected
+    collections to tool ids and from tool ids to the concrete tools in `src/tools`.
+    That lookup must be deterministic and exercised by the current execution path.
+  - >
+    The generated agent must not directly own runtime tool selection. `new-agent`
+    scaffolds the type and declaration metadata. Orchestration decides what tool
+    collection is needed for the run. `src/tools` defines what tools exist. The
+    execution path runs them.
+  - >
+    Fix the execution handoff only as much as needed to prove the loop. The code
+    that runs selected tools must resolve them through the shared tool boundary,
+    not through ad hoc direct imports from the scaffolded agent.
+  - >
+    Lock the execution order for the initial core flow to:
+    `creative.parse-brief` ->
+    `creative.normalize-references` ->
+    `creative.apply-constraints` ->
+    `creative.compose-output`,
+    unless the existing execution path already encodes the same order through a
+    stable mechanism that must be preserved.
+  - >
+    The final assembled result must conform to the existing `CreativeGenerationOutput`
+    contract if it already exists. If that contract already exists in the codebase,
+    preserve it and make the loop satisfy it rather than inventing a parallel output shape.
+  - >
+    Add or update tests across the system, not just one layer. Include coverage for:
+    creative-generation scaffold generation,
+    scaffolded config shape,
+    sequential (`goalProfile` + `creativeMode`) to `creative-generation-core` selection,
+    `creative-generation-core` collection-to-tool-id resolution,
+    tool lookup from `src/tools`,
+    execution of selected tools through the current path,
+    and one end-to-end integration test proving the full flow works.
+  - >
+    Use this explicit proof scenario in tests:
+    scaffold a `creative-generation` agent,
+    confirm its generated config includes `id`, `agentType`, `defaultOrchestration`,
+    `goalProfile`, `creativeMode`, and `toolCollections`,
+    confirm `toolCollections` includes `creative-generation-core`,
+    confirm sequential orchestration selects `creative-generation-core` for a
+    creative-generation run using the generated `goalProfile` and `creativeMode`,
+    confirm the collection resolves to
+    `creative.parse-brief`,
+    `creative.normalize-references`,
+    `creative.apply-constraints`,
+    `creative.compose-output`,
+    confirm the execution path runs those tools in the expected flow,
+    and confirm the final result matches the expected `CreativeGenerationOutput` shape.
+  - >
+    Add protection tests where important invariants must not drift, especially that
+    unrelated agent types still scaffold correctly and unrelated orchestration
+    behavior is not broken by these changes.
+  - >
+    Preserve existing behavior where already defined. If a design choice is
+    unclear, choose the smallest real implementation that closes the loop with
+    the least churn while preserving adaptability for future `creativeMode`
+    variations of the `creative-generation` agent type.
+
+expected_deliverables:
+  - "creative-generation support added to `new-agent` as a real agent type"
+  - "creative-generation template files updated so scaffolded config provides explicit orchestration-facing metadata"
+  - "scaffolded config fields for `id`, `agentType`, `defaultOrchestration`, `goalProfile`, `creativeMode`, and `toolCollections`"
+  - "sequential orchestration mapping from (`goalProfile` + `creativeMode`) to `creative-generation-core`"
+  - "`creative-generation-core` collection resolving deterministically to the required tool ids"
+  - "required creative-generation tools implemented in `src/tools` with stable ids"
+  - "execution-path compatibility updates required to resolve and run the selected local tools"
+  - "tests covering scaffold, selection, lookup, execution, and end-to-end loop closure"
+  - "no unrelated edits"
+
+implementation_rules:
+  - "prefer existing project conventions over inventing new ones"
+  - "prefer real exercised code over speculative architecture"
+  - "prefer stable ids over implicit file-path-based behavior"
+  - "prefer explicit config and explicit mappings over hidden inference"
+  - "use `creativeMode` as the declarative variability field for the creative-generation agent type"
+  - "use tool collections as the orchestration selection boundary"
+  - "preserve adaptability of the creative-generation type by keeping `creativeMode` separate from tool ids and separate from tool collections"
+  - "keep future tool API extraction obvious in naming and boundaries, but do not build the API now"
+  - "do not make generated agents directly own raw tool implementation imports if orchestration and the execution path already own selection and execution"
+  - "do not add extra indirection or unused framework structure that is not required to close the loop"
+
+validation_steps:
+  - "run the relevant tests for `new-agent`, templates, sequential orchestration, tools, and execution"
+  - "run typecheck"
+  - "confirm only intended files changed"
+  - "confirm `new-agent` can scaffold a creative-generation agent"
+  - "confirm the scaffolded config exposes `id`, `agentType`, `defaultOrchestration`, `goalProfile`, `creativeMode`, and `toolCollections`"
+  - "confirm sequential orchestration selects `creative-generation-core` from (`goalProfile` + `creativeMode`)"
+  - "confirm `creative-generation-core` resolves to the required tool ids"
+  - "confirm the required tools are reachable from `src/tools` by stable ids"
+  - "confirm the current execution path resolves and runs the selected tools"
+  - "confirm at least one end-to-end integration test proves the full loop works"
