@@ -28,10 +28,24 @@ User-visible behavior:
 - [x] (2025-11-08 00:00Z) Connect orchestration → eval selection (strategy decides eval type) and orchestration → memory selection.
 - [x] (2025-11-08 00:00Z) Implement test harness with observable outputs and JSON artifacts.
 - [x] (2025-11-26 00:00Z) Refactored orch-centralised and orch-concurrent specs to match controller delegation, per-index inputs, and error isolation.
+- [x] (2026-03-11 00:00Z) Added canonical tool catalog + deterministic resolver with controlled categories and protection tests (src/tools/*, tests/tools/*).
+- [x] (2026-03-16 00:00Z) Build local tools catalog under src/tools with runtime wiring and tests (task: build-local-tools-catalog).
 - [ ] Validate end-to-end on a sample scenario (e.g., “generate pitch deck”).
 - [ ] Document outcomes and finalize.
 
+### Current Task - build-local-tools-catalog (2026-03-16)
+
+- Goal: Implement the first local tools catalog in src/tools so existing orchestration packages and generated agents resolve and execute tools locally before any external API exists.
+- Success criteria: src/tools is the source-of-truth; orchestration tool collections resolve against it; generated agents execute resolved tools; local execution works end-to-end; tests cover registration, lookup, collection resolution, execution, and failure behavior; tests and typecheck pass; no unrelated files change.
+- Constraints: edit only src/tools/** plus minimal integration points needed for tool registration/lookup/execution; no new dependencies; preserve public contracts; keep architecture narrow; add/update tests for changed behavior.
+- Non-goals: do not build external tools API; do not redesign orchestration packages or CLI scaffolding; no remote transport/auth; no unrelated agent/memory/eval/orch refactors.
+- Pattern: local-first adapter boundary - resolve by catalog with stable ids, let orchestration pick collections, let runtime execute through shared contracts, keep future API swap minimal.
+
 ## Surprises & Discoveries
+
+- Observation: TypeScript typecheck (tsc --noEmit) currently fails due to existing NodeNext path/extension issues in scripts/ and ui/ files; outside current tools catalog scope, left unchanged.
+  Evidence: tsc errors for missing .js extensions in scripts/helpers/load.ts and ui/* imports, plus template import resolution.
+  Action: Not addressed in this task; keep scope limited to tools catalog.
 
 - Observation: CODEEXECPLAN.md previously showed encoding artifacts for em-dashes.
   Evidence: occurrences of “â€”” in headings and lists.
@@ -79,7 +93,12 @@ User-visible behavior:
   Rationale: Remove custom runner duplication; ensure reliable discovery across environments.
   Date/Author: 2025-11-08 / codex
 
+- Decision: Adopt local-first adapter boundary for tools (catalog-driven resolution, orchestration-selected collections, runtime execution via shared contracts) to enable later API swap without changing agent-facing behavior.
+  Rationale: Aligns with build-local-tools-catalog task; keeps contracts stable while preparing for future API-backed tools.
+  Date/Author: 2026-03-16 / codex
+
 ## Outcomes & Retrospective
+
 
 Summarize results, gaps, and lessons learned at completion.
 
