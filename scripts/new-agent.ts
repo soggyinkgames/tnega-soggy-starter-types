@@ -36,6 +36,10 @@ import { pathToFileURL } from "node:url";
 import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { DEFAULT_EVALS } from "lib/defaultEvals";
+import {
+    buildTemplateVariables,
+    renderTemplateContent,
+} from "./helpers/templateRendering";
 
 /**
  * ============================================================================
@@ -64,6 +68,7 @@ type Goal = {
     outcomes?: string[];
     examples?: string[];
     recommendedTools?: string[];
+    suitedAgents?: string[];
 };
 
 type PrimaryGoal = {
@@ -80,11 +85,18 @@ type AgentTemplateConfig = {
 type ExistingAgentConfig = {
     id?: string;
     agent_type?: string;
+    agentType?: string;
     default_orch?: string;
+    defaultOrchestration?: string;
+    framework?: string;
     tooling?: { framework?: string };
     goals?: string[];
+    goalProfile?: string;
     outcomes?: string[];
     tools_needed?: string[];
+    toolCollections?: string[];
+    inputKinds?: string[];
+    outputTargets?: string[];
     evals?: string[];
     memory?: { provider?: string };
     self_build?: boolean;
@@ -98,10 +110,95 @@ type ParsedArgs = {
     orch?: string;
     framework?: string;
     memory?: string;
+    specialization?: string;
     evals?: string[];
     tools?: string[];
     yes: boolean;
     dryRun: boolean;
+};
+
+type CreativeGenerationSpecialization = {
+    id: string;
+    label: string;
+    description?: string;
+    inputKinds: readonly string[];
+    outputTargets: readonly string[];
+};
+
+type AgentTemplateScaffoldModule = {
+    defaultEvals?: string[];
+    requiresTemplateFiles?: boolean;
+    specializationSelectionLabel?: string;
+    specializationSelectionDescription?: string;
+    specializations?: CreativeGenerationSpecialization[];
+    defaultSpecializationId?: string;
+    listSpecializationIds?: () => string[];
+    getSpecialization?: (id: string) => CreativeGenerationSpecialization | null;
+    inferSpecializationIdFromGoal?: (goalName?: string) => string | null;
+    buildTemplateRenderData?: (params: {
+        goalVariationName?: string;
+        specialization: CreativeGenerationSpecialization | null;
+    }) => {
+        goalProfile: string;
+        inputKinds: string[];
+        outputTargets: string[];
+    };
+    inferSpecializationIdFromConfig?: (config: {
+        inputKinds?: string[];
+        outputTargets?: string[];
+    }) => string | null;
+    creativeSpecializations?: CreativeGenerationSpecialization[];
+    defaultCreativeSpecializationId?: string;
+    listCreativeSpecializationIds?: () => string[];
+    getCreativeSpecialization?: (id: string) => CreativeGenerationSpecialization | null;
+    inferCreativeSpecializationIdFromGoal?: (goalName?: string) => string | null;
+    buildCreativeTemplateRenderData?: (params: {
+        goalVariationName?: string;
+        specialization: CreativeGenerationSpecialization | null;
+    }) => {
+        goalProfile: string;
+        inputKinds: string[];
+        outputTargets: string[];
+    };
+    inferCreativeSpecializationIdFromConfig?: (config: {
+        inputKinds?: string[];
+        outputTargets?: string[];
+    }) => string | null;
+};
+
+type AgentTemplateScaffold = {
+    defaultEvals: string[];
+    requiresTemplateFiles: boolean;
+    specializationSelectionLabel: string;
+    specializationSelectionDescription: string;
+    specializations: CreativeGenerationSpecialization[];
+    defaultSpecializationId: string | null;
+    getSpecialization: (id: string) => CreativeGenerationSpecialization | null;
+    inferSpecializationIdFromGoal: (goalName?: string) => string | null;
+    buildTemplateRenderData: (params: {
+        goalVariationName?: string;
+        specialization: CreativeGenerationSpecialization | null;
+    }) => {
+        goalProfile: string;
+        inputKinds: string[];
+        outputTargets: string[];
+    };
+    inferSpecializationIdFromConfig: (config: {
+        inputKinds?: string[];
+        outputTargets?: string[];
+    }) => string | null;
+};
+
+type OrchestrationScaffoldModule = {
+    getGoalVariations?: (params: {
+        agentType: string;
+        templateSpecializations?: CreativeGenerationSpecialization[];
+    }) => Goal[] | Promise<Goal[] | null> | null;
+    getRecommendedTools?: (
+        goalProfile: string,
+        runtime?: string,
+        config?: Record<string, unknown>
+    ) => Promise<string[] | null> | string[] | null;
 };
 
 type ResolvedSelection = {
@@ -114,6 +211,7 @@ type ResolvedSelection = {
     evals: string[];
     memoryProvider: string;
     tools: string[];
+    creativeSpecialization: CreativeGenerationSpecialization | null;
     existingAgentConfig: ExistingAgentConfig | null;
 };
 
@@ -125,8 +223,20 @@ type SourceSummary = {
     frameworkSource: string;
     evalsSource: string;
     memorySource: string;
+    creativeSpecializationSource: string;
     toolsSource: string;
 };
+
+type TemplateFileName =
+    | "config.ts"
+    | "eval.ts"
+    | "index.ts"
+    | "plan.md"
+    | "schema.ts"
+    | "test.spec.ts"
+    | "tools.ts";
+
+type AgentTemplateFiles = Partial<Record<TemplateFileName, string>>;
 
 /**
  * ============================================================================
@@ -135,6 +245,14 @@ type SourceSummary = {
  */
 
 const ALL_EVALS = ["basic", "modelgraded", "system", "safety", "regression"];
+const TEMPLATE_REQUIRED_FILES: TemplateFileName[] = [
+    "config.ts",
+    "eval.ts",
+    "index.ts",
+    "schema.ts",
+    "tools.ts",
+];
+const TEMPLATE_OPTIONAL_FILES: TemplateFileName[] = ["plan.md", "test.spec.ts"];
 
 const TEMPLATES_ROOT = path.resolve("templates", "agent-types");
 const PACKAGES_ROOT = path.resolve("packages");
@@ -239,6 +357,10 @@ function parseArgs(argv: string[]): ParsedArgs {
                 break;
             case "--memory":
                 args.memory = next;
+                i++;
+                break;
+            case "--specialization":
+                args.specialization = next;
                 i++;
                 break;
             case "--evals":
@@ -451,6 +573,16 @@ function normalizeAgentType(value: string): string {
     return value.replace(/^\d+-/, "").trim().toLowerCase();
 }
 
+function normalizeOrchestrationId(value: string): string {
+    const trimmed = value.trim();
+    if (!trimmed) return trimmed;
+    return trimmed.startsWith("orch-") ? trimmed : `orch-${trimmed}`;
+}
+
+function normalizeOrchestrationName(value: string): string {
+    return normalizeOrchestrationId(value).replace(/^orch-/, "");
+}
+
 function normalizeEvalName(value: string): string {
     const v = value.trim().toLowerCase();
     if (v === "model-graded") return "modelgraded";
@@ -494,8 +626,32 @@ async function loadGoalsForOrchestration(orchId: string): Promise<Goal[]> {
     return mod?.goals ?? [];
 }
 
-async function loadOrchestrationToolsModule(orchId: string): Promise<any | null> {
-    return safeImport(path.resolve(PACKAGES_ROOT, orchId, "tools.ts"));
+async function loadOrchestrationToolsModule(
+    orchId: string
+): Promise<OrchestrationScaffoldModule | null> {
+    return safeImport<OrchestrationScaffoldModule>(
+        path.resolve(PACKAGES_ROOT, orchId, "tools.ts")
+    );
+}
+
+async function loadGoalVariationsForPath(params: {
+    orchestrationId: string;
+    agentType: string;
+    templateSpecializations?: CreativeGenerationSpecialization[];
+}): Promise<Goal[]> {
+    const toolsMod = await loadOrchestrationToolsModule(params.orchestrationId);
+    if (typeof toolsMod?.getGoalVariations === "function") {
+        const fromModule = await toolsMod.getGoalVariations({
+            agentType: params.agentType,
+            templateSpecializations: params.templateSpecializations,
+        });
+
+        if (Array.isArray(fromModule)) {
+            return fromModule;
+        }
+    }
+
+    return loadGoalsForOrchestration(params.orchestrationId);
 }
 
 async function loadExistingAgentConfig(agentName: string): Promise<ExistingAgentConfig | null> {
@@ -506,30 +662,226 @@ async function loadExistingAgentConfig(agentName: string): Promise<ExistingAgent
     return mod?.default ?? null;
 }
 
-async function loadTemplateEvals(agentTypeSlug: string): Promise<string[]> {
-    if (!(await fs.pathExists(TEMPLATES_ROOT))) return [];
+async function resolveTemplateDir(agentTypeSlug: string): Promise<string | null> {
+    if (!(await fs.pathExists(TEMPLATES_ROOT))) return null;
 
     const templateDirs = await fs.readdir(TEMPLATES_ROOT);
 
     for (const dir of templateDirs) {
-        const normalized = normalizeAgentType(dir);
-        if (normalized !== agentTypeSlug) continue;
-
-        const cfgPath = path.join(TEMPLATES_ROOT, dir, "config.ts");
-        const mod = await safeImport<{ default?: AgentTemplateConfig }>(cfgPath);
-        const cfg = mod?.default;
-
-        if (cfg?.evals?.length) {
-            return cfg.evals.map(normalizeEvalName);
-        }
-
-        const fallback = DEFAULT_EVALS[dir] ?? DEFAULT_EVALS[normalized];
-        if (fallback?.length) {
-            return fallback.map(normalizeEvalName);
+        if (normalizeAgentType(dir) === agentTypeSlug) {
+            return path.join(TEMPLATES_ROOT, dir);
         }
     }
 
+    return null;
+}
+
+async function loadTemplateScaffoldModule<T = any>(
+    agentTypeSlug: string
+): Promise<T | null> {
+    const templateDir = await resolveTemplateDir(agentTypeSlug);
+    if (!templateDir) return null;
+
+    return safeImport<T>(path.join(templateDir, "scaffold.ts"));
+}
+
+async function loadAgentTemplateScaffold(
+    agentTypeSlug: string
+): Promise<AgentTemplateScaffold | null> {
+    const mod = await loadTemplateScaffoldModule<AgentTemplateScaffoldModule>(
+        agentTypeSlug
+    );
+
+    if (!mod) {
+        return null;
+    }
+
+    const specializationDefinitions = mod.specializations ?? mod.creativeSpecializations;
+    const specializations = Array.isArray(specializationDefinitions)
+        ? specializationDefinitions.filter(
+            (specialization): specialization is CreativeGenerationSpecialization =>
+                typeof specialization?.id === "string" &&
+                typeof specialization?.label === "string" &&
+                Array.isArray(specialization?.inputKinds) &&
+                Array.isArray(specialization?.outputTargets)
+        )
+        : [];
+
+    const defaultSpecializationId =
+        specializations.length &&
+        typeof (mod.defaultSpecializationId ?? mod.defaultCreativeSpecializationId) === "string" &&
+        specializations.some(
+            (specialization) =>
+                specialization.id ===
+                (mod.defaultSpecializationId ?? mod.defaultCreativeSpecializationId)
+        )
+            ? (mod.defaultSpecializationId ?? mod.defaultCreativeSpecializationId)!
+            : specializations[0]?.id ?? null;
+
+    const getSpecialization =
+        typeof (mod.getSpecialization ?? mod.getCreativeSpecialization) === "function"
+            ? (mod.getSpecialization ?? mod.getCreativeSpecialization)!
+            : (id: string) =>
+                specializations.find((specialization) => specialization.id === id) ?? null;
+
+    const inferSpecializationIdFromGoal =
+        typeof (mod.inferSpecializationIdFromGoal ?? mod.inferCreativeSpecializationIdFromGoal) === "function"
+            ? (mod.inferSpecializationIdFromGoal ??
+                mod.inferCreativeSpecializationIdFromGoal)!
+            : (goalName?: string) => getSpecialization(goalName ?? "")?.id ?? null;
+
+    const buildTemplateRenderData =
+        typeof (mod.buildTemplateRenderData ?? mod.buildCreativeTemplateRenderData) === "function"
+            ? (mod.buildTemplateRenderData ?? mod.buildCreativeTemplateRenderData)!
+            : (params: {
+                goalVariationName?: string;
+                specialization: CreativeGenerationSpecialization | null;
+            }) => {
+                if (!params.specialization) {
+                    throw new Error(
+                        "Creative-generation scaffolding requires a resolved creative specialization before instantiation."
+                    );
+                }
+
+                return {
+                    goalProfile: params.goalVariationName ?? "",
+                    inputKinds: [...params.specialization.inputKinds],
+                    outputTargets: [...params.specialization.outputTargets],
+                };
+            };
+
+    const inferSpecializationIdFromConfig =
+        typeof (mod.inferSpecializationIdFromConfig ??
+            mod.inferCreativeSpecializationIdFromConfig) === "function"
+            ? (mod.inferSpecializationIdFromConfig ??
+                mod.inferCreativeSpecializationIdFromConfig)!
+            : (config: { inputKinds?: string[]; outputTargets?: string[] }) =>
+                specializations.find((specialization) =>
+                    specialization.outputTargets.some((outputTarget) =>
+                        config.outputTargets?.includes(outputTarget)
+                    ) &&
+                    specialization.inputKinds.every((inputKind) =>
+                        config.inputKinds?.includes(inputKind)
+                    )
+                )?.id ?? null;
+
+    return {
+        defaultEvals: Array.isArray(mod.defaultEvals)
+            ? mod.defaultEvals.map(normalizeEvalName)
+            : [],
+        requiresTemplateFiles: mod.requiresTemplateFiles === true,
+        specializationSelectionLabel:
+            typeof mod.specializationSelectionLabel === "string" &&
+            mod.specializationSelectionLabel.trim()
+                ? mod.specializationSelectionLabel
+                : "Specialization",
+        specializationSelectionDescription:
+            typeof mod.specializationSelectionDescription === "string" &&
+            mod.specializationSelectionDescription.trim()
+                ? mod.specializationSelectionDescription
+                : "Select the specialization exposed by this template.",
+        specializations,
+        defaultSpecializationId,
+        getSpecialization,
+        inferSpecializationIdFromGoal,
+        buildTemplateRenderData,
+        inferSpecializationIdFromConfig,
+    };
+}
+
+async function loadTemplateEvals(agentTypeSlug: string): Promise<string[]> {
+    const scaffold = await loadAgentTemplateScaffold(agentTypeSlug);
+
+    if (Array.isArray(scaffold?.defaultEvals) && scaffold.defaultEvals.length) {
+        return scaffold.defaultEvals.map(normalizeEvalName);
+    }
+
+    const templateDir = await resolveTemplateDir(agentTypeSlug);
+    if (!templateDir) return [];
+
+    const cfgPath = path.join(templateDir, "config.ts");
+    const mod = await safeImport<{ default?: AgentTemplateConfig }>(cfgPath);
+    const cfg = mod?.default;
+
+    if (cfg?.evals?.length) {
+        return cfg.evals.map(normalizeEvalName);
+    }
+
+    const dirName = path.basename(templateDir);
+    const fallback = DEFAULT_EVALS[dirName] ?? DEFAULT_EVALS[agentTypeSlug];
+    if (fallback?.length) {
+        return fallback.map(normalizeEvalName);
+    }
+
     return [];
+}
+
+async function loadTemplateScaffold(agentTypeSlug: string): Promise<AgentTemplateFiles | null> {
+    const templateDir = await resolveTemplateDir(agentTypeSlug);
+    if (!templateDir) return null;
+
+    const files: AgentTemplateFiles = {};
+
+    for (const fileName of TEMPLATE_REQUIRED_FILES) {
+        const filePath = path.join(templateDir, fileName);
+        if (!(await fs.pathExists(filePath))) {
+            return null;
+        }
+
+        const content = await fs.readFile(filePath, "utf8");
+        if (!content.trim()) {
+            return null;
+        }
+
+        files[fileName] = content;
+    }
+
+    for (const fileName of TEMPLATE_OPTIONAL_FILES) {
+        const filePath = path.join(templateDir, fileName);
+        if (!(await fs.pathExists(filePath))) continue;
+        files[fileName] = await fs.readFile(filePath, "utf8");
+    }
+
+    return files;
+}
+
+async function findMissingRequiredTemplateFiles(agentTypeSlug: string): Promise<string[]> {
+    const templateDir = await resolveTemplateDir(agentTypeSlug);
+    const templateScaffold = await loadAgentTemplateScaffold(agentTypeSlug);
+    if (!templateDir) {
+        return templateScaffold?.requiresTemplateFiles
+            ? [...TEMPLATE_REQUIRED_FILES, "scaffold.ts"]
+            : [...TEMPLATE_REQUIRED_FILES];
+    }
+
+    const missingFiles: string[] = [];
+
+    for (const fileName of TEMPLATE_REQUIRED_FILES) {
+        const filePath = path.join(templateDir, fileName);
+        if (!(await fs.pathExists(filePath))) {
+            missingFiles.push(fileName);
+            continue;
+        }
+
+        const content = await fs.readFile(filePath, "utf8");
+        if (!content.trim()) {
+            missingFiles.push(fileName);
+        }
+    }
+
+    if (templateScaffold?.requiresTemplateFiles) {
+        const scaffoldPath = path.join(templateDir, "scaffold.ts");
+        if (!(await fs.pathExists(scaffoldPath))) {
+            missingFiles.push("scaffold.ts");
+        } else {
+            const content = await fs.readFile(scaffoldPath, "utf8");
+            if (!content.trim()) {
+                missingFiles.push("scaffold.ts");
+            }
+        }
+    }
+
+    return missingFiles;
 }
 
 /**
@@ -587,6 +939,115 @@ function getRecommendedOrchestration(
 
     return recommended;
 }
+
+function getRecommendedGoalForAgentType(
+    goalVariations: Goal[],
+    agentType: string
+): Goal | null {
+    const suitedGoal = goalVariations.find((goal) =>
+        goal.suitedAgents?.includes(agentType)
+    );
+    if (suitedGoal) {
+        return suitedGoal;
+    }
+
+    return goalVariations[0] ?? null;
+}
+
+function templateSupportsSpecializations(
+    scaffold: AgentTemplateScaffold | null
+): scaffold is AgentTemplateScaffold {
+    return !!scaffold && scaffold.specializations.length > 0;
+}
+
+async function resolveTemplateSpecialization(params: {
+    scaffold: AgentTemplateScaffold | null;
+    selectedGoal: Goal | null;
+    existingAgentConfig: ExistingAgentConfig | null;
+    specializationArg?: string;
+    nonInteractive: boolean;
+}): Promise<{
+    specialization: CreativeGenerationSpecialization | null;
+    source: string;
+}> {
+    if (!templateSupportsSpecializations(params.scaffold)) {
+        return {
+            specialization: null,
+            source: "not applicable",
+        };
+    }
+
+    let specialization: CreativeGenerationSpecialization | null = null;
+    let source = "not applicable";
+
+    if (params.selectedGoal) {
+        const selectedSpecializationId =
+            params.scaffold.inferSpecializationIdFromGoal(params.selectedGoal.name);
+        specialization = selectedSpecializationId
+            ? params.scaffold.getSpecialization(selectedSpecializationId)
+            : null;
+
+        if (specialization) {
+            source = params.specializationArg
+                ? "CLI goal selection"
+                : params.existingAgentConfig?.goalProfile ||
+                    params.existingAgentConfig?.goals?.[0] ||
+                    params.existingAgentConfig?.outputTargets?.length ||
+                    params.existingAgentConfig?.inputKinds?.length
+                    ? "existing agent config"
+                    : "goal variation";
+        }
+    }
+
+    if (specialization) {
+        return { specialization, source };
+    }
+
+    const recommendedSpecializationId = params.scaffold.defaultSpecializationId;
+    const prefilledSpecializationId =
+        params.specializationArg ??
+        params.scaffold.inferSpecializationIdFromConfig({
+            inputKinds: params.existingAgentConfig?.inputKinds,
+            outputTargets: params.existingAgentConfig?.outputTargets,
+        }) ??
+        recommendedSpecializationId;
+
+    const supportedSpecializationIds = params.scaffold.specializations.map(
+        (candidate) => candidate.id
+    );
+
+    if (!prefilledSpecializationId || !supportedSpecializationIds.includes(prefilledSpecializationId)) {
+        throw new Error(
+            `Template specialization "${prefilledSpecializationId ?? ""}" is not supported.`
+        );
+    }
+
+    const selectedSpecializationId = await useOrAdaptOne({
+        sectionLabel: params.scaffold.specializationSelectionLabel,
+        currentValue: prefilledSpecializationId,
+        recommendedValue: recommendedSpecializationId ?? prefilledSpecializationId,
+        choices: supportedSpecializationIds,
+        why: params.scaffold.specializationSelectionDescription,
+        nonInteractive: params.nonInteractive,
+    });
+
+    specialization = params.scaffold.getSpecialization(selectedSpecializationId);
+    if (!specialization) {
+        throw new Error(
+            `Template specialization "${selectedSpecializationId}" could not be resolved.`
+        );
+    }
+
+    source = params.specializationArg
+        ? "CLI flags"
+        : params.existingAgentConfig?.outputTargets?.length ||
+            params.existingAgentConfig?.inputKinds?.length
+            ? "existing agent config"
+            : "template scaffold default";
+
+    return { specialization, source };
+}
+
 
 function getMemoryConfig(orch: OrchConfig) {
     return (
@@ -647,8 +1108,10 @@ function resolveRecommendedEvals(params: {
 async function resolveRecommendedTools(params: {
     flagTools?: string[];
     selectedGoal: Goal | null;
+    agentType: string;
     orchestrationId: string;
     framework: string;
+    creativeSpecialization: CreativeGenerationSpecialization | null;
 }): Promise<{ tools: string[]; source: string }> {
     const flagTools = params.flagTools?.filter(Boolean) ?? [];
     if (flagTools.length) {
@@ -661,7 +1124,18 @@ async function resolveRecommendedTools(params: {
         try {
             const fromModule = await toolsMod.getRecommendedTools(
                 params.selectedGoal.name,
-                params.framework
+                params.framework,
+                {
+                    agentType: params.agentType,
+                    defaultOrchestration: normalizeOrchestrationName(params.orchestrationId),
+                    goalProfile: params.selectedGoal.name,
+                    inputKinds: params.creativeSpecialization
+                        ? [...params.creativeSpecialization.inputKinds]
+                        : undefined,
+                    outputTargets: params.creativeSpecialization
+                        ? [...params.creativeSpecialization.outputTargets]
+                        : undefined,
+                }
             );
             if (Array.isArray(fromModule) && fromModule.length) {
                 return { tools: unique(fromModule), source: "orchestration tools resolver" };
@@ -731,6 +1205,17 @@ function printFinalSummary(resolved: ResolvedSelection, sources: SourceSummary, 
     console.log(`Framework: ${resolved.framework}  (${sources.frameworkSource})`);
     console.log(`Evals: ${resolved.evals.join(", ") || "(none)"}  (${sources.evalsSource})`);
     console.log(`Memory: ${resolved.memoryProvider}  (${sources.memorySource})`);
+    if (resolved.creativeSpecialization) {
+        console.log(
+            `Creative specialization: ${resolved.creativeSpecialization.label}  (${sources.creativeSpecializationSource})`
+        );
+        console.log(
+            `Input kinds: ${resolved.creativeSpecialization.inputKinds.join(", ")}  (${sources.creativeSpecializationSource})`
+        );
+        console.log(
+            `Output targets: ${resolved.creativeSpecialization.outputTargets.join(", ")}  (${sources.creativeSpecializationSource})`
+        );
+    }
     console.log(`Tools: ${resolved.tools.join(", ") || "(none)"}  (${sources.toolsSource})`);
 
     if (resolved.goalVariation?.outcomes?.length) {
@@ -796,25 +1281,19 @@ function buildEvalsText(finalEvals: string[]) {
 function buildToolsText(tools: string[]) {
     return `
 export const requiredTools = ${JSON.stringify(tools, null, 4)};
-
-export const toolingStatus = {
-    status: "partial",
-    note: "Verify each resolved tool exists and is wired before production use."
-};
 `.trimStart();
 }
 
 function buildIndexText() {
     return `
 import config from "./config";
-import { requiredTools, toolingStatus } from "./tools";
+import { requiredTools } from "./tools";
 
 export async function runAgent(query: string) {
     return {
         output: \`Echo:\${query}\`,
         config,
-        requiredTools,
-        toolingStatus
+        requiredTools
     };
 }
 
@@ -844,22 +1323,87 @@ function buildBuildNotesText(resolved: ResolvedSelection, sources: SourceSummary
 - Framework: ${resolved.framework} (${sources.frameworkSource})
 - Evals: ${resolved.evals.join(", ") || "(none)"} (${sources.evalsSource})
 - Memory: ${resolved.memoryProvider} (${sources.memorySource})
+- Creative specialization: ${resolved.creativeSpecialization?.label ?? "(none)"} (${sources.creativeSpecializationSource})
+- Input kinds: ${resolved.creativeSpecialization?.inputKinds.join(", ") || "(none)"} (${sources.creativeSpecializationSource})
+- Output targets: ${resolved.creativeSpecialization?.outputTargets.join(", ") || "(none)"} (${sources.creativeSpecializationSource})
 - Tools: ${resolved.tools.join(", ") || "(none)"} (${sources.toolsSource})
 
 ## Manual verification checklist
 - Confirm orchestration is implemented and intended for this agent type
 - Confirm each tool exists and is discoverable in current tooling architecture
 - Confirm memory provider is actually wired
-- Replace placeholder runtime logic in index.ts
-- Replace placeholder eval stubs in evals.ts with real eval implementation
+- Run the orchestration-backed execution path and confirm the declared tools match the expected behavior
+- Replace scaffold eval logic with project-specific checks if stronger coverage is needed
 - Add tests once scaffold shape is confirmed
 `.trimStart();
 }
 
-async function writeAgentFiles(resolved: ResolvedSelection, sources: SourceSummary, dryRun: boolean) {
-    const agentDir = path.join(AGENTS_ROOT, resolved.agentName);
+async function buildAgentFiles(
+    resolved: ResolvedSelection,
+    sources: SourceSummary
+): Promise<Record<string, string>> {
+    const agentTypeSlug = normalizeAgentType(resolved.agentType);
+    const templateFiles = await loadTemplateScaffold(agentTypeSlug);
+    const templateScaffold = await loadAgentTemplateScaffold(agentTypeSlug);
 
-    const files: Record<string, string> = {
+    if (resolved.creativeSpecialization && !templateScaffold) {
+        throw new Error(
+            `${resolved.agentType} scaffolding requires template scaffold metadata before files can be rendered.`
+        );
+    }
+
+    if (templateFiles) {
+        const renderData =
+            templateSupportsSpecializations(templateScaffold)
+                ? templateScaffold.buildTemplateRenderData({
+                    goalVariationName: resolved.goalVariation?.name,
+                    specialization: resolved.creativeSpecialization,
+                })
+                : {
+                    goalProfile: resolved.goalVariation?.name ?? "",
+                    inputKinds: [],
+                    outputTargets: [],
+                };
+
+        const templateVariables = buildTemplateVariables({
+            agentName: resolved.agentName,
+            primaryGoalId: resolved.primaryGoal.id,
+            primaryGoalLabel: resolved.primaryGoal.label,
+            agentType: resolved.agentType,
+            orchestrationId: resolved.orchestration.id,
+            defaultOrchestration: normalizeOrchestrationName(resolved.orchestration.id),
+            framework: resolved.framework,
+            goalProfile: renderData.goalProfile,
+            goalDescription: resolved.goalVariation?.description ?? "",
+            goals: resolved.goalVariation ? [resolved.goalVariation.name] : [],
+            outcomes: resolved.goalVariation?.outcomes ?? [],
+            tools: resolved.tools,
+            evals: resolved.evals,
+            memoryProvider: resolved.memoryProvider,
+            inputKinds: renderData.inputKinds,
+            outputTargets: renderData.outputTargets,
+        });
+        const files: Record<string, string> = {};
+
+        for (const [fileName, content] of Object.entries(templateFiles)) {
+            files[fileName] = renderTemplateContent(content, templateVariables);
+        }
+
+        files["BUILD_NOTES.md"] = buildBuildNotesText(resolved, sources);
+        return files;
+    }
+
+    if (templateScaffold?.requiresTemplateFiles) {
+        const missingFiles = await findMissingRequiredTemplateFiles(agentTypeSlug);
+        const missingList = missingFiles.length
+            ? missingFiles.join(", ")
+            : TEMPLATE_REQUIRED_FILES.join(", ");
+        throw new Error(
+            `${resolved.agentType} scaffolding requires the starter template files and will not use the generic fallback. Missing required files: ${missingList}.`
+        );
+    }
+
+    return {
         "config.ts": buildConfigText({
             agentName: resolved.agentName,
             agentType: resolved.agentType,
@@ -877,6 +1421,15 @@ async function writeAgentFiles(resolved: ResolvedSelection, sources: SourceSumma
         "schema.ts": buildSchemaText(),
         "BUILD_NOTES.md": buildBuildNotesText(resolved, sources),
     };
+}
+
+async function writeAgentFiles(
+    resolved: ResolvedSelection,
+    sources: SourceSummary,
+    dryRun: boolean
+): Promise<string[]> {
+    const agentDir = path.join(AGENTS_ROOT, resolved.agentName);
+    const files = await buildAgentFiles(resolved, sources);
 
     if (dryRun) {
         console.log(chalk.yellow("Dry run only. Files that would be written:\n"));
@@ -885,7 +1438,7 @@ async function writeAgentFiles(resolved: ResolvedSelection, sources: SourceSumma
             console.log(content);
             console.log("");
         }
-        return;
+        return Object.keys(files);
     }
 
     await fs.ensureDir(agentDir);
@@ -893,6 +1446,8 @@ async function writeAgentFiles(resolved: ResolvedSelection, sources: SourceSumma
     for (const [fileName, content] of Object.entries(files)) {
         await fs.writeFile(path.join(agentDir, fileName), content, "utf8");
     }
+
+    return Object.keys(files);
 }
 
 /**
@@ -999,6 +1554,7 @@ async function run() {
     const prefilledAgentType =
         args.type ??
         existingAgentConfig?.agent_type ??
+        existingAgentConfig?.agentType ??
         recommendedAgentType;
 
     if (!candidateAgentTypes.includes(prefilledAgentType)) {
@@ -1038,6 +1594,9 @@ async function run() {
     const prefilledOrchId =
         args.orch ??
         existingAgentConfig?.default_orch ??
+        (existingAgentConfig?.defaultOrchestration
+            ? normalizeOrchestrationId(existingAgentConfig.defaultOrchestration)
+            : undefined) ??
         recommendedOrch.id;
 
     const compatibleOrchIds = compatibleOrchs.map((o) => o.id);
@@ -1066,7 +1625,13 @@ async function run() {
 
     const orchestration = compatibleOrchs.find((o) => o.id === chosenOrchId)!;
 
-    const goalVariations = await loadGoalsForOrchestration(orchestration.id);
+    const agentTypeSlug = normalizeAgentType(agentType);
+    const templateScaffold = await loadAgentTemplateScaffold(agentTypeSlug);
+    const goalVariations = await loadGoalVariationsForPath({
+        orchestrationId: orchestration.id,
+        agentType,
+        templateSpecializations: templateScaffold?.specializations,
+    });
     let selectedGoal: Goal | null = null;
     let goalSource = "no goal variation selected";
 
@@ -1074,16 +1639,21 @@ async function run() {
         printGoalVariationDetails(goalVariations);
 
         const recommendedGoal =
-            goalVariations[0]?.name ?? null;
+            getRecommendedGoalForAgentType(goalVariations, agentType)?.name ?? null;
 
         const prefilledGoal =
             args.goal ??
             existingAgentConfig?.goals?.[0] ??
+            existingAgentConfig?.goalProfile ??
+            templateScaffold?.inferSpecializationIdFromConfig({
+                inputKinds: existingAgentConfig?.inputKinds,
+                outputTargets: existingAgentConfig?.outputTargets,
+            }) ??
             recommendedGoal;
 
         if (prefilledGoal && !goalVariations.some((g) => g.name === prefilledGoal)) {
             throw new Error(
-                `Goal variation "${prefilledGoal}" not found in ${orchestration.id}/goals.ts`
+                `Goal variation "${prefilledGoal}" is not available for the selected orchestration path.`
             );
         }
 
@@ -1092,17 +1662,33 @@ async function run() {
             currentValue: prefilledGoal ?? goalVariations[0].name,
             recommendedValue: recommendedGoal ?? goalVariations[0].name,
             choices: goalVariations.map((g) => g.name),
-            why: `Loaded from ${orchestration.id}/goals.ts`,
+            why: `Loaded from ${orchestration.id} goal definitions.`,
             nonInteractive,
         });
 
         selectedGoal = goalVariations.find((g) => g.name === chosenGoalName)!;
         goalSource = args.goal
             ? "CLI flags"
-            : existingAgentConfig?.goals?.[0]
+            : existingAgentConfig?.goals?.[0] || existingAgentConfig?.goalProfile
                 ? "existing agent config"
                 : "orchestration goals";
     }
+
+    /**
+     * ------------------------------------------------------------------------
+     * STEP 5B: TEMPLATE SPECIALIZATION
+     * ------------------------------------------------------------------------
+     */
+
+    const specializationResolution = await resolveTemplateSpecialization({
+        scaffold: templateScaffold,
+        selectedGoal,
+        existingAgentConfig,
+        specializationArg: args.specialization,
+        nonInteractive,
+    });
+    const creativeSpecialization = specializationResolution.specialization;
+    const creativeSpecializationSource = specializationResolution.source;
 
     /**
      * ------------------------------------------------------------------------
@@ -1113,6 +1699,7 @@ async function run() {
     const recommendedFramework = orchestration.default_framework;
     const prefilledFramework =
         args.framework ??
+        existingAgentConfig?.framework ??
         existingAgentConfig?.tooling?.framework ??
         recommendedFramework;
 
@@ -1206,26 +1793,33 @@ async function run() {
     const toolResolution = await resolveRecommendedTools({
         flagTools: args.tools,
         selectedGoal,
+        agentType,
         orchestrationId: orchestration.id,
         framework,
+        creativeSpecialization,
     });
 
-    const allVisibleToolChoices = unique([
-        ...toolResolution.tools,
-        ...(selectedGoal?.recommendedTools ?? []),
-    ]);
+    const allVisibleToolChoices =
+        agentType === "creative-generation"
+            ? toolResolution.tools
+            : unique([
+                ...toolResolution.tools,
+                ...(selectedGoal?.recommendedTools ?? []),
+            ]);
 
     const finalTools =
-        allVisibleToolChoices.length > 0
-            ? await useOrAdaptMany({
-                sectionLabel: "Tools",
-                currentValues: toolResolution.tools,
-                recommendedValues: toolResolution.tools,
-                choices: allVisibleToolChoices,
-                why: `Resolved from ${toolResolution.source}.`,
-                nonInteractive,
-            })
-            : [];
+        agentType === "creative-generation"
+            ? toolResolution.tools
+            : allVisibleToolChoices.length > 0
+                ? await useOrAdaptMany({
+                    sectionLabel: "Tools",
+                    currentValues: toolResolution.tools,
+                    recommendedValues: toolResolution.tools,
+                    choices: allVisibleToolChoices,
+                    why: `Resolved from ${toolResolution.source}.`,
+                    nonInteractive,
+                })
+                : [];
 
     const toolsSource = toolResolution.source;
 
@@ -1245,6 +1839,7 @@ async function run() {
         evals: finalEvals,
         memoryProvider,
         tools: finalTools,
+        creativeSpecialization,
         existingAgentConfig,
     };
 
@@ -1256,6 +1851,7 @@ async function run() {
         frameworkSource,
         evalsSource,
         memorySource,
+        creativeSpecializationSource,
         toolsSource,
     };
 
@@ -1278,13 +1874,13 @@ async function run() {
         }
     }
 
-    await writeAgentFiles(resolved, sources, args.dryRun);
+    const writtenFiles = await writeAgentFiles(resolved, sources, args.dryRun);
 
     if (args.dryRun) {
         console.log(chalk.green("Dry run complete."));
     } else {
         console.log(chalk.green(`✅ Created agent "${agentName}"`));
-        console.log(chalk.green("📦 Files: config.ts, evals.ts, tools.ts, index.ts, schema.ts, BUILD_NOTES.md"));
+        console.log(chalk.green(`Generated files: ${writtenFiles.join(", ")}`));
     }
 }
 
@@ -1294,12 +1890,23 @@ async function run() {
  * ============================================================================
  */
 
-run()
-    .catch((error) => {
+const isDirectExecution =
+    process.argv[1] !== undefined &&
+    path.resolve(process.argv[1]) === path.resolve("scripts", "new-agent.ts");
+
+if (isDirectExecution) {
+    run()
+        .catch((error) => {
         console.error(chalk.red("\n❌ new-agent failed"));
         console.error(error);
         process.exitCode = 1;
     })
-    .finally(async () => {
+        .finally(async () => {
         await rl.close();
     });
+
+}
+
+export { run };
+
+export default { run };

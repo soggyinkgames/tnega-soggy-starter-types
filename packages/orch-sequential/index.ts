@@ -2,6 +2,8 @@
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
+import { executeTool } from "../../src/tools/runtime";
+import { resolveSequentialAgentToolRuntime } from "./tools";
 
 export class SequentialOrch implements OrchestrationPattern {
   id = config.id;
@@ -34,11 +36,33 @@ export class SequentialOrch implements OrchestrationPattern {
       };
 
       try {
+        const {
+          selectedToolCollections,
+          selectedToolIds,
+          declaredRequiredTools,
+        } = resolveSequentialAgentToolRuntime({
+          id: agent.id,
+          config: agent.config,
+          requiredTools: agent.requiredTools,
+        });
+
         const output = await agent.run(current, {
           mode: "sequential",
           step: i,
           runOrchFramework,
-          history
+          history,
+          selectedToolCollections,
+          selectedToolIds,
+          declaredRequiredTools,
+          executeTool: (toolId: string, spec: any) =>
+            executeTool(toolId, spec, {
+              agentId: agent.id,
+              orchestrationId: this.id,
+              step: i,
+              selectedToolCollections,
+              selectedToolIds,
+              history,
+            }),
         });
 
         entry.output = output;

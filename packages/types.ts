@@ -23,6 +23,8 @@ export interface OrchestrationPattern {
 
 export interface Agent {
   id: string;
+  config?: Record<string, any>;
+  requiredTools?: string[];
   name?: string;
   role?: string;
   cost?: number;

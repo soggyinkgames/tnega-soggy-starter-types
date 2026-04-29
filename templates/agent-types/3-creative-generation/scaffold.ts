@@ -8,7 +8,17 @@ export type CreativeGenerationSpecialization = {
   outputTargets: readonly CreativeOutputTarget[];
 };
 
+export type CreativeTemplateRenderData = {
+  goalProfile: string;
+  inputKinds: string[];
+  outputTargets: string[];
+};
+
 export const defaultEvals = Object.freeze(["modelgraded", "safety"]);
+export const requiresTemplateFiles = true;
+export const specializationSelectionLabel = "Creative Specialization";
+export const specializationSelectionDescription =
+  "Creative-generation templates define concrete specializations by accepted inputs and output targets.";
 
 export const creativeSpecializations = Object.freeze([
   {
@@ -28,16 +38,20 @@ export const creativeSpecializations = Object.freeze([
 ] satisfies readonly CreativeGenerationSpecialization[]);
 
 export const defaultCreativeSpecializationId = creativeSpecializations[0].id;
+export const specializations = creativeSpecializations;
+export const defaultSpecializationId = defaultCreativeSpecializationId;
 
 export function listCreativeSpecializationIds(): string[] {
   return creativeSpecializations.map((specialization) => specialization.id);
 }
+export const listSpecializationIds = listCreativeSpecializationIds;
 
 export function getCreativeSpecialization(
   id: string,
 ): CreativeGenerationSpecialization | null {
   return creativeSpecializations.find((specialization) => specialization.id === id) ?? null;
 }
+export const getSpecialization = getCreativeSpecialization;
 
 export function inferCreativeSpecializationIdFromConfig(config: {
   inputKinds?: string[];
@@ -50,3 +64,28 @@ export function inferCreativeSpecializationIdFromConfig(config: {
 
   return specialization?.id ?? null;
 }
+export const inferSpecializationIdFromConfig = inferCreativeSpecializationIdFromConfig;
+
+export function inferCreativeSpecializationIdFromGoal(goalName?: string): string | null {
+  if (!goalName) return null;
+  return getCreativeSpecialization(goalName)?.id ?? null;
+}
+export const inferSpecializationIdFromGoal = inferCreativeSpecializationIdFromGoal;
+
+export function buildCreativeTemplateRenderData(params: {
+  goalVariationName?: string;
+  specialization: CreativeGenerationSpecialization | null;
+}): CreativeTemplateRenderData {
+  if (!params.specialization) {
+    throw new Error(
+      "Creative-generation scaffolding requires a resolved creative specialization before instantiation.",
+    );
+  }
+
+  return {
+    goalProfile: params.goalVariationName ?? "",
+    inputKinds: [...params.specialization.inputKinds],
+    outputTargets: [...params.specialization.outputTargets],
+  };
+}
+export const buildTemplateRenderData = buildCreativeTemplateRenderData;

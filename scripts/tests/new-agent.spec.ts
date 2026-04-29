@@ -3,6 +3,9 @@ import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { SequentialOrch } from "../../packages/orch-sequential/index.js";
 
 describe("new-agent integration", () => {
     let tempRoot: string;
@@ -31,9 +34,10 @@ export default {
     description: "Sequential orchestration for focused agents.",
     supported_framework: ["langgraph", "custom-runtime"],
     default_framework: "langgraph",
-    compatible_agent_types: ["knowledge-insight", "strategy"],
+    compatible_agent_types: ["knowledge-insight", "strategy", "creative-generation"],
     recommended_for: {
-        "knowledge-insight": true
+        "knowledge-insight": true,
+        "creative-generation": true
     },
     memory: {
         default: "supabase",
@@ -74,12 +78,33 @@ export const goals = [
         await writeFile(
             "packages/orch-sequential/tools.ts",
             `
-export async function getRecommendedTools(goalName, runtime) {
+export function getGoalVariations({ agentType, templateSpecializations }) {
+    if (agentType !== "creative-generation") return null;
+    return (templateSpecializations ?? []).map((specialization) => ({
+        name: specialization.id,
+        description: specialization.description,
+        outcomes: [...specialization.outputTargets],
+        examples: [specialization.label],
+        suitedAgents: ["creative-generation"],
+        recommendedTools:
+            specialization.id === "music"
+                ? ["ingest.source-materials", "normalize.references", "derive.music-spec", "assemble.output-payload"]
+                : ["ingest.source-materials", "normalize.references", "derive.line-art-spec", "assemble.output-payload"],
+    }));
+}
+
+export async function getRecommendedTools(goalName, runtime, config) {
     if (goalName === "retrieve-and-summarize" && runtime === "langgraph") {
         return ["query_knowledge_base", "summarize_context", "trace_steps"];
     }
     if (goalName === "answer-with-citations") {
         return ["query_knowledge_base", "format_citations"];
+    }
+    if (config?.outputTargets?.includes("line-art") || goalName === "line-art") {
+        return ["ingest.source-materials", "normalize.references", "derive.line-art-spec", "assemble.output-payload"];
+    }
+    if (config?.outputTargets?.includes("music") || goalName === "music") {
+        return ["ingest.source-materials", "normalize.references", "derive.music-spec", "assemble.output-payload"];
     }
     return [];
 }
@@ -139,6 +164,30 @@ export default {
 };
 `
         );
+
+        for (const fileName of [
+            "config.ts",
+            "eval.ts",
+            "index.ts",
+            "plan.md",
+            "scaffold.ts",
+            "schema.ts",
+            "test.spec.ts",
+            "tools.ts",
+        ]) {
+            const templatePath = path.join(
+                originalCwd,
+                "templates",
+                "agent-types",
+                "3-creative-generation",
+                fileName,
+            );
+            const content = await fs.readFile(templatePath, "utf8");
+            await writeFile(
+                path.join("templates", "agent-types", "3-creative-generation", fileName),
+                content,
+            );
+        }
     }
 
     async function importSubject() {
@@ -176,6 +225,7 @@ export default {
                 DEFAULT_EVALS: {
                     "knowledge-insight": ["basic", "modelgraded", "system"],
                     strategy: ["basic", "system", "regression"],
+                    "creative-generation": ["modelgraded", "safety"],
                 },
             };
         });
@@ -257,6 +307,7 @@ export default {
         expect(toolsText).toContain(`"query_knowledge_base"`);
         expect(toolsText).toContain(`"summarize_context"`);
         expect(toolsText).toContain(`"trace_steps"`);
+        expect(toolsText).not.toContain(`toolingStatus`);
 
         expect(evalsText).toContain(`run_basic`);
         expect(evalsText).toContain(`run_modelgraded`);
@@ -308,6 +359,7 @@ export default {
 
         expect(toolsText).toContain(`"query_knowledge_base"`);
         expect(toolsText).toContain(`"format_citations"`);
+        expect(toolsText).not.toContain(`toolingStatus`);
 
         expect(evalsText).toContain(`run_basic`);
         expect(evalsText).toContain(`run_modelgraded`);
@@ -396,5 +448,119 @@ export default {
         expect(evalsText).toContain(`run_basic`);
         expect(evalsText).toContain(`run_regression`);
         expect(evalsText).not.toContain(`run_safety`);
+    });
+
+    it("scaffolds creative-generation with explicit config and closes the sequential tools loop", async () => {
+        process.argv = [
+            "node",
+            "new-agent.ts",
+            "--name", "creative-agent",
+            "--primary-goal", "generate-content",
+            "--yes",
+        ];
+
+        questionAnswers = [];
+
+        const run = await getRun();
+        await run();
+
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/config.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/index.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/tools.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/eval.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/schema.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/plan.md"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/test.spec.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/evals.ts"))).toBe(false);
+
+        process.chdir(originalCwd);
+
+        const configModule: any = await import(
+            pathToFileURL(path.join(tempRoot, "agents", "creative-agent", "config.ts")).href
+        );
+        const agentModule: any = await import(
+            pathToFileURL(path.join(tempRoot, "agents", "creative-agent", "index.ts")).href
+        );
+
+        const agent = {
+            id: configModule.default.id,
+            config: configModule.default,
+            run: agentModule.runAgent,
+        };
+
+        expect(configModule.default).toMatchObject({
+            id: "creative-agent",
+            agentType: "creative-generation",
+            defaultOrchestration: "sequential",
+            goalProfile: "line-art",
+            inputKinds: ["prompt-text", "image-photo", "reference-set"],
+            outputTargets: ["line-art"],
+            framework: "langgraph",
+            evals: ["modelgraded", "safety"],
+        });
+        expect(configModule.default.memory).toEqual({ provider: "supabase" });
+        expect(configModule.default.toolCollections).toBeUndefined();
+
+        const toolsText = await readFile("agents/creative-agent/tools.ts");
+        expect(toolsText).toContain(`"ingest.source-materials"`);
+        expect(toolsText).toContain(`"derive.line-art-spec"`);
+        expect(toolsText).not.toContain(`toolingStatus`);
+
+        const result = await SequentialOrch.run(
+            {
+                prompt: "Hero poster concept",
+                images: [{ source: "hero.png", label: "hero" }],
+                format: "poster",
+                references: ["ink illustration", { label: "energy", summary: "dynamic composition" }],
+                style: ["bold"],
+                mood: ["dramatic"],
+                theme: ["heroic"],
+                constraints: ["single focal character"],
+            },
+            [agent as any],
+        );
+
+        expect(result.result.kind).toBe("creative-generation");
+        expect(result.result.goalProfile).toBe("line-art");
+        expect(result.result.outputTarget).toBe("line-art");
+        expect(result.result.execution.selectedToolCollections).toEqual([
+            "source-material-preparation",
+            "line-art-specification",
+        ]);
+        expect(result.result.execution.executedToolIds).toEqual([
+            "ingest.source-materials",
+            "normalize.references",
+            "derive.line-art-spec",
+            "assemble.output-payload",
+        ]);
+        expect(result.result.references).toHaveLength(2);
+        expect(result.result.constraints.format).toBe("poster");
+        expect(result.result.artifact.summary).toContain("Line art output");
+    });
+
+    it("fails for creative-generation when the template scaffold is incomplete instead of using the generic fallback", async () => {
+        await fs.rm(
+            path.join(tempRoot, "templates", "agent-types", "3-creative-generation", "eval.ts"),
+            { force: true },
+        );
+
+        process.argv = [
+            "node",
+            "new-agent.ts",
+            "--name", "broken-creative-agent",
+            "--primary-goal", "generate-content",
+            "--yes",
+        ];
+
+        questionAnswers = [];
+
+        const run = await getRun();
+
+        await expect(run()).rejects.toThrow(
+            "creative-generation scaffolding requires the starter template files and will not use the generic fallback. Missing required files: eval.ts."
+        );
+
+        expect(existsSync(path.join(tempRoot, "agents/broken-creative-agent/config.ts"))).toBe(false);
+        expect(existsSync(path.join(tempRoot, "agents/broken-creative-agent/evals.ts"))).toBe(false);
     });
 });
