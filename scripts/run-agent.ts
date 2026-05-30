@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs-extra";
 import chalk from "chalk";
 import { pathToFileURL } from "url";
+import { OrchestrationRegistry } from "../packages/registry";
 
 // ---------------------------------------------------------------------------
 // Helper: load module safely
@@ -19,6 +20,27 @@ async function safeImport(modulePath: string) {
         console.error(err);
         process.exit(1);
     }
+}
+
+function normalizeOrchestrationId(value?: string): string | null {
+    if (!value) return null;
+    return value.startsWith("orch-") ? value : `orch-${value}`;
+}
+
+function formatOutputForDisplay(output: any): string | null {
+    if (typeof output === "string") {
+        return output;
+    }
+
+    if (typeof output?.output === "string") {
+        return output.output;
+    }
+
+    if (output === undefined) {
+        return null;
+    }
+
+    return JSON.stringify(output, null, 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -55,6 +77,7 @@ async function main() {
     const agentPath = path.join(baseDir, "index.ts");
     const configPath = path.join(baseDir, "config.ts");
     const evalPath = path.join(baseDir, "eval.ts");
+    const toolsPath = path.join(baseDir, "tools.ts");
 
     if (!fs.existsSync(agentPath)) {
         log.error(`Agent not found at ${agentPath}`);
@@ -65,18 +88,53 @@ async function main() {
     const agentMod = await safeImport(agentPath);
     const configMod = fs.existsSync(configPath) ? await safeImport(configPath) : {};
     const evalMod = fs.existsSync(evalPath) ? await safeImport(evalPath) : {};
+    const toolsMod = fs.existsSync(toolsPath) ? await safeImport(toolsPath) : {};
 
     const runAgent = agentMod.runAgent || agentMod.default;
     const runEvals = evalMod.runEvals;
+    const config = configMod.default ?? {};
+    const requiredTools = Array.isArray(toolsMod.requiredTools)
+        ? toolsMod.requiredTools
+        : [];
+    const orchestrationId = normalizeOrchestrationId(
+        config.defaultOrchestration ?? config.default_orch
+    );
 
     log.title(`Running Agent: ${agentName}`);
     log.info(`Prompt: ${query}`);
-    log.info(`Using evals: ${(configMod.default?.evals || []).join(", ") || "none"}`);
+    log.info(`Using evals: ${(config.evals || []).join(", ") || "none"}`);
+    if (orchestrationId) {
+        log.info(`Orchestration: ${orchestrationId}`);
+    }
 
     // Execute the agent
     let output: any;
     try {
-        output = await runAgent(query);
+        if (orchestrationId) {
+            const OrchestrationRunner =
+                OrchestrationRegistry[
+                    orchestrationId as keyof typeof OrchestrationRegistry
+                ];
+
+            if (!OrchestrationRunner || typeof OrchestrationRunner.run !== "function") {
+                throw new Error(
+                    `No orchestration runner is registered for "${orchestrationId}".`
+                );
+            }
+
+            const orchestrationResult = await OrchestrationRunner.run(query, [
+                {
+                    id: config.id ?? agentName,
+                    config,
+                    requiredTools,
+                    run: runAgent,
+                },
+            ]);
+
+            output = orchestrationResult?.result;
+        } else {
+            output = await runAgent(query);
+        }
     } catch (err) {
         log.error("Agent run failed:");
         console.error(err);
@@ -84,7 +142,10 @@ async function main() {
     }
 
     log.success("Agent run completed.");
-    if (output?.output) console.log(chalk.whiteBright(`\n📝 Output:\n${output.output}`));
+    const displayOutput = formatOutputForDisplay(output);
+    if (displayOutput) {
+        console.log(chalk.whiteBright(`\n📝 Output:\n${displayOutput}`));
+    }
 
     // Run evals if available
     if (runEvals) {
@@ -92,7 +153,12 @@ async function main() {
         try {
             const evalResults = await runEvals({
                 input: query,
-                output: output?.output || "",
+                output:
+                    typeof output?.output === "string"
+                        ? output.output
+                        : typeof output === "string"
+                            ? output
+                            : displayOutput || "",
                 meta: { agent: agentName, time: new Date().toISOString() },
             });
 

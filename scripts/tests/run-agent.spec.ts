@@ -5,18 +5,36 @@ import { exec } from "node:child_process";
 
 const AGENT_NAME = "__test-agent";
 const AGENT_DIR = path.resolve("agents", AGENT_NAME);
+const ORCH_AGENT_NAME = "__test-sequential-agent";
+const ORCH_AGENT_DIR = path.resolve("agents", ORCH_AGENT_NAME);
 
 beforeAll(async () => {
   await fs.ensureDir(AGENT_DIR);
-  // Minimal agent exposing runAgent(query: string)
   const indexTs = `export async function runAgent(query: string){ return { output: \`Echo:${'${'}query${'}'}\` }; }`;
   await fs.writeFile(path.join(AGENT_DIR, "index.ts"), indexTs, "utf8");
   const configTs = `export default { id: "${AGENT_NAME}", evals: [] };`;
   await fs.writeFile(path.join(AGENT_DIR, "config.ts"), configTs, "utf8");
+
+  await fs.ensureDir(ORCH_AGENT_DIR);
+  const orchIndexTs = `
+export async function runAgent(query: string){
+  return { output: \`Sequential:\${query}\`, mode: "sequential" };
+}
+`;
+  await fs.writeFile(path.join(ORCH_AGENT_DIR, "index.ts"), orchIndexTs, "utf8");
+  const orchConfigTs = `
+export default {
+  id: "${ORCH_AGENT_NAME}",
+  evals: [],
+  defaultOrchestration: "sequential",
+};
+`;
+  await fs.writeFile(path.join(ORCH_AGENT_DIR, "config.ts"), orchConfigTs, "utf8");
 });
 
 afterAll(async () => {
   await fs.remove(AGENT_DIR);
+  await fs.remove(ORCH_AGENT_DIR);
 });
 
 async function runWithTsx(args: string[]): Promise<{ stdout: string; code: number }> {
@@ -44,6 +62,16 @@ describe("scripts/run-agent", () => {
     expect(stdout).toMatch(/Running Agent:/);
     expect(stdout).toMatch(/Agent run completed/);
     expect(stdout).toMatch(/Output:[\s\S]*Echo:hello world/);
+  }, 60000);
+
+  it("routes orchestration-backed agents through their declared runtime", async () => {
+    const { stdout, code } = await runWithTsx([ORCH_AGENT_NAME, "hello world"]);
+    if (code !== 0) {
+      throw new Error(`run-agent exited with code ${code}. Stdout:\n${stdout}`);
+    }
+    expect(stdout).toMatch(/Orchestration: orch-sequential/);
+    expect(stdout).toMatch(/Agent run completed/);
+    expect(stdout).toMatch(/Output:[\s\S]*Sequential:hello world/);
   }, 60000);
 
   it("exits with usage when args are missing", async () => {
