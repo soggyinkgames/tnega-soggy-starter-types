@@ -2,7 +2,7 @@
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
-import { executeTool } from "../../src/tools/runtime";
+import { executeTool as executeLocalTool } from "../../src/tools/runtime";
 import { resolveSequentialAgentToolRuntime } from "./tools";
 
 export class SequentialOrch implements OrchestrationPattern {
@@ -54,15 +54,24 @@ export class SequentialOrch implements OrchestrationPattern {
           selectedToolCollections,
           selectedToolIds,
           declaredRequiredTools,
-          executeTool: (toolId: string, spec: any) =>
-            executeTool(toolId, spec, {
+          // Keep this executeTool(toolId, state) contract stable: today it calls
+          // local tools, later it can call a tools API without changing generated agents.
+          executeTool: (toolId: string, spec: any) => {
+            if (!selectedToolIds.includes(toolId)) {
+              throw new Error(
+                `Sequential tooling denied unselected tool "${toolId}" for agent "${agent.id}".`,
+              );
+            }
+
+            return executeLocalTool(toolId, spec, {
               agentId: agent.id,
               orchestrationId: this.id,
               step: i,
               selectedToolCollections,
               selectedToolIds,
               history,
-            }),
+            });
+          },
         });
 
         entry.output = output;

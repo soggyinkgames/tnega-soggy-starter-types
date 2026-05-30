@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { executeTool, loadToolHandler } from "../../src/tools/runtime";
-import { UnknownToolIdError } from "../../src/tools/types";
+import { executeTool, loadToolHandler } from "../../src/tools/runtime.js";
+import { UnknownToolIdError } from "../../src/tools/types.js";
 
 describe("tool runtime execution", () => {
   it("loads and executes a tool by id", async () => {

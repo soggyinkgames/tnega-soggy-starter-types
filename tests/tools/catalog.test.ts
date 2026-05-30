@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalToolCatalog } from "../../src/tools/catalog";
-import { CONTROLLED_TOOL_CATEGORIES } from "../../src/tools/types";
+import { canonicalToolCatalog } from "../../src/tools/catalog.js";
+import { CONTROLLED_TOOL_CATEGORIES } from "../../src/tools/types.js";
 
 describe("tool catalog integrity", () => {
   it("protection (invariant): catalog has unique tool ids", () => {
@@ -17,5 +17,16 @@ describe("tool catalog integrity", () => {
       .filter((category) => !allowed.has(category));
 
     expect(invalid).toHaveLength(0);
+  });
+
+  it("contains the creative-generation tool ids behind stable names", () => {
+    const ids = canonicalToolCatalog.map((tool) => tool.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      "ingest.source-materials",
+      "normalize.references",
+      "derive.line-art-spec",
+      "derive.music-spec",
+      "assemble.output-payload",
+    ]));
   });
 });

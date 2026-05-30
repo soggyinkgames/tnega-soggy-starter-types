@@ -1,16 +1,24 @@
 export type ToolCategory =
-  | "analysis"
-  | "generation"
-  | "retrieval"
-  | "summarization"
-  | "framework";
+  | "analyze"
+  | "assemble"
+  | "derive"
+  | "framework"
+  | "generate"
+  | "ingest"
+  | "normalize"
+  | "retrieve"
+  | "summarize";
 
 export const CONTROLLED_TOOL_CATEGORIES: readonly ToolCategory[] = [
-  "analysis",
-  "generation",
-  "retrieval",
-  "summarization",
+  "analyze",
+  "assemble",
+  "derive",
   "framework",
+  "generate",
+  "ingest",
+  "normalize",
+  "retrieve",
+  "summarize",
 ] as const;
 
 export interface ToolDefinition {
@@ -36,6 +44,13 @@ export class UnknownToolIdError extends Error {
   constructor(toolId: string) {
     super(`Unknown tool id: ${toolId}`);
     this.name = "UnknownToolIdError";
+  }
+}
+
+export class UnknownToolCollectionError extends Error {
+  constructor(collectionId: string) {
+    super(`Unknown tool collection id: ${collectionId}`);
+    this.name = "UnknownToolCollectionError";
   }
 }
 

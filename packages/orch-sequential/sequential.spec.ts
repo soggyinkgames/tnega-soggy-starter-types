@@ -208,4 +208,33 @@ describe("SequentialOrch", () => {
     );
     expect(creativeAgent.run).not.toHaveBeenCalled();
   });
+
+  it("denies execution of tools outside the selected tool ids", async () => {
+    const creativeAgent: Agent = {
+      id: "creative-agent",
+      config: {
+        id: "creative-agent",
+        agentType: "creative-generation",
+        defaultOrchestration: "sequential",
+        goalProfile: "line-art",
+        inputKinds: ["prompt-text", "image-photo", "reference-set"],
+        outputTargets: ["line-art"],
+      },
+      requiredTools: [
+        "ingest.source-materials",
+        "normalize.references",
+        "derive.line-art-spec",
+        "assemble.output-payload",
+      ],
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        await ctx.executeTool("search", { query: "not selected" });
+      }),
+    } as any;
+
+    const result = await SequentialOrch.run({ prompt: "Poster" }, [creativeAgent]);
+
+    expect(result.history?.[0]?.error).toContain(
+      'Sequential tooling denied unselected tool "search" for agent "creative-agent".',
+    );
+  });
 });

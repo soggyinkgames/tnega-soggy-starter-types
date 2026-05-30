@@ -1,5 +1,33 @@
 import { resolveTool, resolveTools } from "./resolve_tools";
-import { ToolDefinition } from "./types";
+import { ToolDefinition, UnknownToolCollectionError } from "./types";
+
+const TOOL_COLLECTIONS = [
+  {
+    id: "source-material-preparation",
+    toolIds: [
+      "ingest.source-materials",
+      "normalize.references",
+    ],
+  },
+  {
+    id: "line-art-specification",
+    toolIds: [
+      "derive.line-art-spec",
+      "assemble.output-payload",
+    ],
+  },
+  {
+    id: "music-specification",
+    toolIds: [
+      "derive.music-spec",
+      "assemble.output-payload",
+    ],
+  },
+] as const;
+
+const TOOL_COLLECTION_BY_ID = new Map(
+  TOOL_COLLECTIONS.map((collection) => [collection.id, collection]),
+);
 
 /**
  * Normalize a framework tooling string (e.g., "langchain") into a catalog tool id.
@@ -11,12 +39,14 @@ export function frameworkToolId(tooling: string): string {
 
 /**
  * Compute the set of tool ids selected by an orchestration config.
- * Currently limited to framework tooling plus any explicit tool_ids provided.
+ * Includes framework tooling, named tool collections, and explicit tool ids.
  */
 export function toolIdsForOrchestration(config: {
   default_framework?: string;
   tool_ids?: string[];
   tools?: string[];
+  toolCollections?: string[];
+  tool_collections?: string[];
 }): string[] {
   const ids: string[] = [];
 
@@ -24,10 +54,37 @@ export function toolIdsForOrchestration(config: {
     ids.push(frameworkToolId(config.default_framework));
   }
 
+  const collections = config?.toolCollections ?? config?.tool_collections ?? [];
+  ids.push(...resolveToolIdsForCollections(collections));
+
   const extras = config?.tool_ids ?? config?.tools ?? [];
   ids.push(...extras);
 
   return ids;
+}
+
+function resolveToolIdsForCollection(collectionId: string): string[] {
+  const collection = TOOL_COLLECTION_BY_ID.get(collectionId);
+  if (!collection) {
+    throw new UnknownToolCollectionError(collectionId);
+  }
+
+  return [...collection.toolIds];
+}
+
+export function resolveToolIdsForCollections(collectionIds: readonly string[]): string[] {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  for (const collectionId of collectionIds) {
+    for (const toolId of resolveToolIdsForCollection(collectionId)) {
+      if (seen.has(toolId)) continue;
+      ordered.push(toolId);
+      seen.add(toolId);
+    }
+  }
+
+  return ordered;
 }
 
 /**
@@ -38,6 +95,8 @@ export function resolveToolCollectionForOrchestration(config: {
   default_framework?: string;
   tool_ids?: string[];
   tools?: string[];
+  toolCollections?: string[];
+  tool_collections?: string[];
 }): ToolDefinition[] {
   const ids = toolIdsForOrchestration(config);
   return resolveTools(ids);
