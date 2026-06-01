@@ -38,14 +38,8 @@ function renderTemplateContent(content: string): string {
 async function renderCreativeTemplateFixture() {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "creative-template-"));
     const tempDir = path.join(tempRoot, "agents", "creative-agent");
-    const sharedToolsDir = path.join(tempRoot, "src", "tools");
 
     await fs.mkdir(tempDir, { recursive: true });
-    await fs.mkdir(sharedToolsDir, { recursive: true });
-    await fs.copyFile(
-        path.join(process.cwd(), "src/tools/executionContext.ts"),
-        path.join(sharedToolsDir, "executionContext.ts"),
-    );
 
     for (const fileName of creativeTemplateFiles) {
         const templatePath = path.join(templateDir, fileName);

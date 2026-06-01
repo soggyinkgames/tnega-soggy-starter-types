@@ -104,6 +104,13 @@ export async function runAgentCommand(
       },
     ]);
 
+    const failedEntry = orchestrationResult?.history?.find((entry) => entry.error);
+    if (failedEntry?.error) {
+      throw new Error(
+        `Agent "${failedEntry.agentId}" failed during ${orchestrationId}: ${failedEntry.error}`,
+      );
+    }
+
     output = orchestrationResult?.result;
   } else {
     output = await runAgent(options.query);

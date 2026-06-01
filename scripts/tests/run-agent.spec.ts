@@ -138,6 +138,33 @@ describe("runAgentCommand", () => {
     ).rejects.toThrow('No orchestration runner is registered for "orch-sequential".');
   });
 
+  it("fails when orchestration records an agent error", async () => {
+    const run = vi.fn(async () => ({
+      id: "orch-sequential",
+      result: "stale result",
+      history: [
+        {
+          agentId: ORCH_AGENT_NAME,
+          error: "Error: tool failed",
+          timestamp: Date.now(),
+        },
+      ],
+    }));
+
+    await expect(
+      runAgentCommand({
+        agentName: ORCH_AGENT_NAME,
+        query: "hello world",
+        agentsRoot,
+        orchestrationRegistry: {
+          "orch-sequential": { run },
+        },
+      }),
+    ).rejects.toThrow(
+      `Agent "${ORCH_AGENT_NAME}" failed during orch-sequential: Error: tool failed`,
+    );
+  });
+
   it("runs evals through a mockable eval loader", async () => {
     const runEvals = vi.fn(async (payload: any) => [
       { id: "mock-eval", passed: true, notes: payload.output },

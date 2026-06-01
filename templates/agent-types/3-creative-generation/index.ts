@@ -8,7 +8,30 @@ import {
     type CreativeGenerationOutput,
 } from "./schema";
 import { requiredTools } from "./tools";
-import { getSelectedToolExecutionContext } from "../../src/tools/executionContext";
+
+type ToolExecutionContext = {
+    selectedToolCollections: string[];
+    selectedToolIds: string[];
+    executeTool: (toolId: string, state: any) => Promise<any>;
+};
+
+function requireToolExecutionContext(
+    context: Record<string, any> | undefined
+): ToolExecutionContext {
+    if (
+        !Array.isArray(context?.selectedToolCollections) ||
+        !Array.isArray(context?.selectedToolIds) ||
+        typeof context?.executeTool !== "function"
+    ) {
+        throw new Error("Creative generation run requires orchestration-selected tools and executeTool().");
+    }
+
+    return {
+        selectedToolCollections: context.selectedToolCollections,
+        selectedToolIds: context.selectedToolIds,
+        executeTool: context.executeTool,
+    };
+}
 
 export async function runAgent(
     raw: unknown,
@@ -16,7 +39,7 @@ export async function runAgent(
 ): Promise<CreativeGenerationOutput> {
     const validatedConfig = assertCreativeGenerationConfig(config);
     const input = normalizeCreativeGenerationInput(raw);
-    const toolContext = getSelectedToolExecutionContext(context, "Creative generation run");
+    const toolContext = requireToolExecutionContext(context);
 
     let state = createCreativeGenerationState(input, validatedConfig);
     const executedToolIds: string[] = [];

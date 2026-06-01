@@ -252,7 +252,7 @@ const TEMPLATE_REQUIRED_FILES: TemplateFileName[] = [
     "schema.ts",
     "tools.ts",
 ];
-const TEMPLATE_OPTIONAL_FILES: TemplateFileName[] = ["plan.md", "test.spec.ts"];
+const TEMPLATE_OPTIONAL_FILES: TemplateFileName[] = ["plan.md"];
 
 const TEMPLATES_ROOT = path.resolve("templates", "agent-types");
 const PACKAGES_ROOT = path.resolve("packages");
