@@ -99,7 +99,7 @@ describe("CentralisedOrch", () => {
     vi.doMock("../../tools/frameworks/index", () => ({ loadFramework: loadFrameworkMock }));
 
     const { runOrchFramework } = await import("./index.js");
-    const cfg = { default_tooling: "langchain" };
+    const cfg = { default_framework: "langchain" };
     const result = await runOrchFramework("query", cfg);
 
     expect(loadFrameworkMock).toHaveBeenCalledWith("langchain");

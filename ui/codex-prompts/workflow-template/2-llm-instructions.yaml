@@ -1,0 +1,89 @@
+task: "<task-id>"
+
+goal: >
+  <single concrete outcome to implement>
+
+success_criteria:
+  - "<observable success condition>"
+  - "<observable success condition>"
+  - "<tests pass>"
+  - "<typecheck passes>"
+  - "<no unrelated files changed>"
+
+context:
+  subsystem: "<subsystem name>"
+  important_existing_files:
+    - "<relevant file, folder, or package>"
+    - "<relevant file, folder, or package>"
+    - "<relevant file, folder, or package>"
+  current_constraint: >
+    <important present-tense constraint that shapes the implementation>
+
+hard_constraints:
+  - "edit only <allowed paths>"
+  - "do not add dependencies"
+  - "do not broaden architecture"
+  - "preserve existing public contracts"
+  - "add or update tests for changed behavior"
+
+non_goals:
+  - "<explicitly excluded work>"
+  - "<explicitly excluded work>"
+  - "<explicitly excluded work>"
+
+instructions:
+  - >
+    First inspect the current implementation, relevant contracts, and runtime flow.
+    Derive the smallest compatible design that satisfies this task without changing
+    public contracts unless explicitly requested.
+  - >
+    Implement only the minimal structure required for the requested capability.
+    Separate contracts, registration/catalog logic, resolution logic, runtime wiring,
+    and concrete implementations where relevant.
+  - >
+    Keep the design adapter-friendly so the current implementation can later move
+    behind another boundary with minimal contract churn.
+  - >
+    Preserve ownership boundaries of existing subsystems. Do not move responsibility
+    into a new subsystem unless this task explicitly requires it.
+  - >
+    Ensure the current runtime continues to receive and execute the implemented behavior
+    through the existing flow, not through a newly invented architecture.
+  - >
+    Prefer small, composable files and explicit naming. Prefer stable identifiers over
+    implicit conventions unless an implicit convention already exists and is required.
+  - >
+    Update only the minimal integration points required for the requested behavior.
+  - >
+    Add or update tests for the main happy path, edge cases, invalid cases, and
+    protection cases where important behavior or invariants must not drift.
+  - >
+    Preserve existing behavior where already defined. If an implementation choice is
+    unclear, choose the narrowest option that satisfies the task without widening scope.
+
+expected_deliverables:
+  - "<primary implementation deliverable>"
+  - "<minimal integration deliverable>"
+  - "<tests covering changed behavior>"
+  - "<no unrelated edits>"
+
+implementation_rules:
+  - "prefer existing project conventions over inventing new ones"
+  - "prefer stable ids over implicit file-path-based behavior"
+  - "prefer explicit registries/catalogs over hidden auto-discovery unless auto-discovery already exists"
+  - "keep future extraction or replacement obvious in naming and boundaries"
+  - "avoid placeholder architecture that is not exercised by the current runtime flow"
+
+validation_steps:
+  - "run relevant tests"
+  - "run typecheck"
+  - "confirm only intended files changed"
+  - "confirm the requested behavior works through the current runtime flow"
+
+output_format:
+  - "Provide a concise summary of what changed"
+  - "List files created and files modified"
+  - "State any contract assumptions preserved"
+  - "State test coverage added or updated"
+  - "State validation results for tests and typecheck"
+  - "Call out unresolved risks briefly, only if real"

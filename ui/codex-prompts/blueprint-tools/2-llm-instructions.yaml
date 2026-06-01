@@ -1,0 +1,105 @@
+task: build-local-tools-catalog
+goal: >
+  Implement the first local tools catalog under `src/tools` so agents can execute
+  tooling selected by existing orchestration packages in `packages/orch-*`,
+  proving the runtime loop works before the tools layer is extracted into an API.
+
+success_criteria:
+  - "`src/tools` is the local source-of-truth catalog for available tools"
+  - "existing orchestration packages can reference tool collections that resolve against that catalog"
+  - "generated agents can execute resolved tools through the current runtime"
+  - "local tool execution works end-to-end without the external API"
+  - "tests cover registration, lookup, and execution behavior"
+  - "tests pass"
+  - "typecheck passes"
+  - "no unrelated files changed"
+
+context:
+  subsystem: "tools resolution and execution for generated agents"
+  important_existing_files:
+    - "CLI agent templates"
+    - "`packages/orch-*` packages"
+    - "goal-to-tool collection mapping"
+    - "agent runtime/tool execution path"
+  current_constraint: >
+    Tool implementations are local for now, but must be structured so they can
+    later move behind a tools API with minimal contract changes.
+
+hard_constraints:
+  - "edit only `src/tools/**` and minimal existing integration points needed for tool registration, lookup, and execution"
+  - "do not add dependencies"
+  - "do not broaden architecture"
+  - "preserve existing public contracts"
+  - "add or update tests for changed behavior"
+
+non_goals:
+  - "do not build the external tools API"
+  - "do not redesign orchestration packages"
+  - "do not redesign CLI scaffolding beyond minimal existing wiring needs"
+  - "do not introduce remote transport, auth, or network calls"
+  - "do not refactor unrelated agent, memory, eval, or orchestration systems"
+
+instructions:
+  - >
+    First inspect the existing tool execution path, goal-to-tool collection mapping,
+    and any current tool types/contracts. Derive the smallest compatible design that
+    makes `src/tools` the local catalog without changing public contracts.
+  - >
+    Implement a clear catalog structure in `src/tools` that separates:
+    1) tool contract/definition shape,
+    2) tool registration/catalog lookup,
+    3) local tool implementations,
+    4) tool collection resolution for orchestration use.
+  - >
+    Keep the design adapter-friendly: local implementations should sit behind stable
+    contracts so the execution path can later swap local implementations for API-backed
+    implementations with minimal churn.
+  - >
+    Existing orchestration packages in `packages/orch-*` must resolve tool collections
+    against the catalog; do not move orchestration ownership into `src/tools`.
+  - >
+    Generated agents must continue to receive tools through the current runtime flow,
+    not through a newly invented architecture.
+  - >
+    Prefer small, composable files and explicit naming. Ensure tools are discoverable
+    by stable identifiers and grouped in a way that is packageable later.
+  - >
+    Update only the minimal integration points required to register, resolve, and execute
+    tools from the current agent/orchestration flow.
+  - >
+    Add or update tests for:
+    - catalog registration
+    - tool lookup by stable id
+    - collection resolution from orchestration-selected tool sets
+    - runtime execution of resolved local tools
+    - failure behavior for missing or invalid tool ids if such behavior already has a contract
+  - >
+    Preserve existing behavior where already defined. If an implementation choice is unclear,
+    choose the narrowest option that satisfies the ticket without broadening architecture.
+
+expected_deliverables:
+  - "local tools catalog under `src/tools`"
+  - "minimal runtime wiring needed to resolve and execute tools from the catalog"
+  - "tests covering registration, lookup, collection resolution, and execution"
+  - "no unrelated edits"
+
+implementation_rules:
+  - "prefer existing project conventions over inventing new ones"
+  - "prefer stable ids over implicit file-path-based behavior"
+  - "prefer explicit registries/catalogs over hidden auto-discovery unless auto-discovery already exists"
+  - "keep future API extraction obvious in naming and boundaries"
+  - "avoid placeholder architecture that is not exercised by current runtime flow"
+
+validation_steps:
+  - "run tests related to tools, agent runtime, and orchestration integration"
+  - "run typecheck"
+  - "confirm only intended files changed"
+  - "confirm generated agents can execute resolved tools locally through current runtime flow"
+
+output_format:
+  - "Provide a concise summary of what changed"
+  - "List files created and files modified"
+  - "State any contract assumptions preserved"
+  - "State test coverage added/updated"
+  - "State validation results for tests and typecheck"
+  - "Call out any unresolved risks briefly, only if real"

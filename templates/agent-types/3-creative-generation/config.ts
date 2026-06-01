@@ -1,12 +1,13 @@
-// agents/3-creative-generation/config.ts
 export default {
-    id: "3-creative-generation",
-    title: "Creative Generation Agent",
-    orchestration: "llamaindex", // crewai | langchain | langgraph
-    memory: { shortTerm: "redis", longTerm: "supabase" },
-    vectorStore: "pgvector",
-    llm: "openai:gpt-4-turbo",
-    evals: ["modelgraded", "safety"],
-    deploy: "vercel",
-    ci: "github",
+    id: "__AGENT_NAME__",
+    agentType: "creative-generation" as const,
+    defaultOrchestration: "__DEFAULT_ORCHESTRATION__",
+    goalProfile: "__GOAL_PROFILE__",
+    inputKinds: JSON.parse('__INPUT_KINDS_JSON__') as string[],
+    outputTargets: JSON.parse('__OUTPUT_TARGETS_JSON__') as string[],
+    evals: JSON.parse('__EVALS_JSON__') as string[],
+    memory: {
+        provider: "__MEMORY_PROVIDER__",
+    },
+    framework: "__FRAMEWORK__",
 };

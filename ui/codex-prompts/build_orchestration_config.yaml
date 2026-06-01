@@ -36,7 +36,7 @@ changes:
 
           async initialize() {
             const { loadFramework } = await import("../tools/frameworks/index.ts");
-            this.framework = await loadFramework(this.config.default_tooling);
+            this.framework = await loadFramework(this.config.default_framework);
             await this.framework.init?.(this.config);
           }
 
@@ -112,8 +112,8 @@ changes:
         export default {
           id: "orch-hierarchical",
           description: "Planner–executor–reviewer orchestration",
-          default_tooling: "crewai",
-          supported_tooling: ["langgraph", "langchain"],
+          default_framework: "crewai",
+          supported_framework: ["langgraph", "langchain"],
           memory_model: "per-session",
           evaluation_mode: "system",
           node_roles: {
@@ -127,8 +127,8 @@ changes:
         export default {
           id: "orch-shared-memory",
           description: "Shared memory orchestration for knowledge-insight agents",
-          default_tooling: "langgraph",
-          supported_tooling: ["langgraph", "langchain"],
+          default_framework: "langgraph",
+          supported_framework: ["langgraph", "langchain"],
           memory_model: "shared",
           evaluation_mode: "system",
           node_roles: {}
@@ -138,8 +138,8 @@ changes:
         export default {
           id: "orch-group-collaborative",
           description: "Collaborative orchestration for creative multi-agent exchange",
-          default_tooling: "crewai",
-          supported_tooling: ["crewai", "langgraph"],
+          default_framework: "crewai",
+          supported_framework: ["crewai", "langgraph"],
           memory_model: "session-shared",
           evaluation_mode: "system",
           node_roles: {}
@@ -149,8 +149,8 @@ changes:
         export default {
           id: "orch-negotiate",
           description: "Negotiation-based orchestration for simulation and scenario agents",
-          default_tooling: "crewai",
-          supported_tooling: ["crewai", "langgraph"],
+          default_framework: "crewai",
+          supported_framework: ["crewai", "langgraph"],
           memory_model: "adaptive",
           evaluation_mode: "system",
           node_roles: {}
@@ -160,8 +160,8 @@ changes:
         export default {
           id: "orch-concurrent",
           description: "Parallel concurrent orchestration for data analysis/debugging",
-          default_tooling: "langgraph",
-          supported_tooling: ["langgraph", "langchain"],
+          default_framework: "langgraph",
+          supported_framework: ["langgraph", "langchain"],
           memory_model: "per-session",
           evaluation_mode: "system",
           node_roles: {}
@@ -171,8 +171,8 @@ changes:
         export default {
           id: "orch-sequential",
           description: "Step-based sequential orchestration for workflow assistant agents",
-          default_tooling: "langchain",
-          supported_tooling: ["langchain", "langgraph"],
+          default_framework: "langchain",
+          supported_framework: ["langchain", "langgraph"],
           memory_model: "per-session",
           evaluation_mode: "system",
           node_roles: {}
@@ -182,8 +182,8 @@ changes:
         export default {
           id: "orch-centralised",
           description: "Central orchestrator pattern for educational tutor–learner loops",
-          default_tooling: "langchain",
-          supported_tooling: ["langchain", "langgraph"],
+          default_framework: "langchain",
+          supported_framework: ["langchain", "langgraph"],
           memory_model: "central",
           evaluation_mode: "system",
           node_roles: {}
@@ -193,8 +193,8 @@ changes:
         export default {
           id: "orch-hybrid-adaptive",
           description: "Adaptive orchestration for dev-infrastructure agents",
-          default_tooling: "langgraph",
-          supported_tooling: ["langgraph", "crewai", "langchain"],
+          default_framework: "langgraph",
+          supported_framework: ["langgraph", "crewai", "langchain"],
           memory_model: "dynamic",
           evaluation_mode: "system",
           node_roles: {}
@@ -206,7 +206,7 @@ changes:
              import { loadFramework } from "../../tools/frameworks/index.ts";
 
       export async function runOrchFramework(query: string, config: any) {
-        const framework = await loadFramework(config.default_tooling);
+        const framework = await loadFramework(config.default_framework);
         await framework.init?.(config);
         return await framework.run(query, config);
       }

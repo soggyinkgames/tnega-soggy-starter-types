@@ -1,0 +1,146 @@
+# FAILED DO NOT USE
+
+task: "close-sequential-orchestration-loop-for-creative-generation"
+
+goal: >
+  Implement the missing end-to-end wiring so sequential orchestration goals can
+  select the correct tool collections, `new-agent` can scaffold a creative-generation
+  agent that references those tools correctly, and the current runtime can resolve
+  and execute the required local tools through `src/tools` without architectural
+  expansion.
+
+success_criteria:
+  - "sequential orchestration goals can map to the correct tool collections for a creative-generation agent"
+  - "the tools required by the creative-generation flow are explicitly defined in the local tools catalog"
+  - "the runtime can resolve selected tools from `src/tools` by stable ids through the existing execution path"
+  - "`new-agent` can scaffold a creative-generation agent whose generated config and files align with the sequential orchestration and tools flow"
+  - "a generated creative-generation agent can run through the current sequential orchestration loop using local tools only"
+  - "tests pass"
+  - "typecheck passes"
+  - "no unrelated files changed"
+
+context:
+  subsystem: "sequential orchestration goal selection, local tools catalog, agent scaffolding, and runtime tool execution"
+  important_existing_files:
+    - "packages/orch-sequential/**"
+    - "src/tools/**"
+    - "CLI `new-agent` flow, agent template registration, and creative-generation template files"
+    - "shared agent, orchestration, and tool contracts used by the current runtime"
+  current_constraint: >
+    Tool implementations remain local under `src/tools`, orchestration already owns
+    goals and selection behavior, and the runtime already has an execution path.
+    The implementation must close the existing loop fully using current subsystem
+    ownership rather than inventing a new orchestration or tools architecture.
+
+hard_constraints:
+  - "edit only `packages/orch-sequential/**`, `src/tools/**`, `new-agent` generation or template wiring, creative-generation template files, minimal shared contracts required for compatibility, and directly related tests"
+  - "do not add dependencies"
+  - "do not broaden architecture"
+  - "preserve existing public contracts unless a minimal compatibility adjustment is strictly required"
+  - "add or update tests for changed behavior"
+
+non_goals:
+  - "do not extract tools behind an API yet"
+  - "do not redesign orchestration strategy types beyond the minimum needed to support the current sequential goal flow"
+  - "do not refactor unrelated orchestration packages, unrelated agent types, or unrelated templates"
+
+instructions:
+  - >
+    First inspect the current sequential orchestration package, tool catalog,
+    runtime tool execution path, `new-agent` generation flow, and the current
+    creative-generation template. Identify the exact open-loop points preventing:
+    goal-to-tool selection, tool definition coverage, generated config alignment,
+    catalog resolution, and runtime execution.
+  - >
+    Trace the real current flow from sequential orchestration goals to tool
+    collection selection, from selected tools into generated agent config or
+    runtime input, and from runtime lookup into `src/tools`. Base the implementation
+    on that existing flow rather than assumptions.
+  - >
+    Implement the smallest compatible end-to-end design that closes the loop fully:
+    1) sequential goals select tool collections or tool ids,
+    2) required creative-generation tools exist in the local catalog,
+    3) `new-agent` emits files and config aligned with that selection model,
+    4) runtime resolves and executes those tools through existing contracts.
+  - >
+    Define the required creative-generation tools explicitly in `src/tools` behind
+    stable ids and catalog registration. Prefer minimal concrete local tools that
+    are actually exercised by the current runtime over speculative or placeholder tools.
+  - >
+    If the project already uses tool collections, ensure sequential goals select
+    those collections explicitly and deterministically. If the project already uses
+    direct tool ids, preserve that model. Do not introduce a second parallel selection mechanism.
+  - >
+    Ensure the local tools catalog is the source of truth for tool definition,
+    registration, and resolution. Do not rely on fragile direct imports from generated
+    agents if the runtime expects catalog-driven lookup.
+  - >
+    Update `new-agent` only as much as needed so creative-generation scaffolding
+    emits the correct tool-facing configuration, schema, and runtime-aligned files.
+    Mirror existing agent-template conventions rather than creating a creative-specific path.
+  - >
+    Keep contracts, registration or catalog logic, orchestration selection logic,
+    generator wiring, runtime resolution, and concrete tool implementations clearly
+    separated where those boundaries already exist.
+  - >
+    Preserve subsystem ownership:
+    sequential orchestration owns goal sequencing and tool selection,
+    `src/tools` owns tool definition and registration,
+    `new-agent` owns scaffold generation,
+    the runtime owns execution.
+  - >
+    Prefer explicit registries, maps, and stable ids over file-path inference,
+    ad hoc branching, or hidden conventions unless those conventions already exist
+    and are required by current code.
+  - >
+    Do not invent abstract future-facing architecture that is not exercised now.
+    Any adapter-friendly boundary must still be fully used by the current runtime flow.
+  - >
+    Add or update tests for the complete loop, including:
+    1) sequential goal to tool collection or tool id selection,
+    2) tool catalog registration and lookup for required creative-generation tools,
+    3) `new-agent` scaffold output for creative-generation,
+    4) runtime execution through the current tool boundary,
+    5) protection cases ensuring unrelated agent types and unrelated orchestration behavior do not drift.
+  - >
+    Include at least one end-to-end integration-style test that proves the loop is
+    closed using the current sequential orchestration path and local tools only.
+  - >
+    Preserve existing behavior where already defined. Where behavior is unclear,
+    choose the narrowest implementation that closes the loop without widening scope.
+
+expected_deliverables:
+  - "updated sequential orchestration goal-to-tool selection wiring for creative-generation compatibility"
+  - "explicit local tool definitions and catalog registration required by the creative-generation flow"
+  - "updated `new-agent` and creative-generation template wiring aligned to orchestration and runtime expectations"
+  - "minimal runtime compatibility updates only if required to resolve and execute selected tools through the current flow"
+  - "tests covering selection, registration, generation, and end-to-end execution"
+  - "no unrelated edits"
+
+implementation_rules:
+  - "prefer existing project conventions over inventing new ones"
+  - "prefer stable ids over implicit file-path-based behavior"
+  - "prefer explicit registries or catalogs over hidden auto-discovery unless auto-discovery already exists"
+  - "keep future extraction of tools behind an API obvious in naming and boundaries"
+  - "avoid placeholder architecture that is not exercised by the current sequential runtime flow"
+  - "do not duplicate ownership of tool selection across orchestration and generator layers"
+  - "do not make generated agents responsible for resolving raw tool implementations directly if the runtime already owns that responsibility"
+
+validation_steps:
+  - "run relevant tests for sequential orchestration, tools, generator, and runtime execution"
+  - "run typecheck"
+  - "confirm only intended files changed"
+  - "confirm sequential goals select the expected tools or tool collections"
+  - "confirm the required creative-generation tools are defined and resolvable from `src/tools`"
+  - "confirm `new-agent` generates a creative-generation agent aligned with the current selection and runtime model"
+  - "confirm a generated creative-generation agent can execute through the current sequential orchestration loop using local tools only"
+
+output_format:
+  - "Provide a concise summary of what changed"
+  - "List files created and files modified"
+  - "State how sequential goal selection now maps to tools"
+  - "List the required tools defined or updated"
+  - "State any contract assumptions preserved"
+  - "State test coverage added or updated"
+  - "State validation results for tests and typecheck"
+  - "Call out unresolved risks briefly, only if real"

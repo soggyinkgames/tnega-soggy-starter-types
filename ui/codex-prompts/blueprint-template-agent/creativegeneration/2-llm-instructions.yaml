@@ -1,0 +1,110 @@
+# FAILED DO NOT USE
+
+
+task: "build-creative-generation-template"
+
+goal: >
+  Implement the creative-generation agent template so the starter can scaffold a
+  working creative-generation agent that fits the existing agent generation flow,
+  runtime shape, and template conventions.
+
+success_criteria:
+  - "the starter can scaffold a creative-generation agent through the existing generation flow"
+  - "generated creative-generation files include a valid schema, config, agent entry, and required supporting template files"
+  - "generated output follows existing agent template conventions and works with the current runtime"
+  - "tests pass"
+  - "typecheck passes"
+  - "no unrelated files changed"
+
+context:
+  subsystem: "agent scaffolding templates for starter-generated agents"
+  important_existing_files:
+    - "agent template files used by the starter CLI"
+    - "existing agent type templates used as reference implementations"
+    - "shared agent definition, config, and schema wiring used by generated agents"
+  current_constraint: >
+    The creative-generation template must be added as a first-class template within
+    the existing starter architecture and generation flow, without introducing a new
+    runtime system or changing how other agent templates are scaffolded.
+
+hard_constraints:
+  - "edit only creative-generation template files, minimal shared template registration or wiring, and directly related tests"
+  - "do not add dependencies"
+  - "do not broaden architecture"
+  - "preserve existing public contracts"
+  - "add or update tests for changed behavior"
+
+non_goals:
+  - "do not redesign the starter CLI"
+  - "do not invent a new creative pipeline architecture beyond what the current runtime uses"
+  - "do not refactor unrelated agent templates or shared systems unless required for minimal registration"
+
+instructions:
+  - >
+    First inspect the current implementation, relevant contracts, and runtime flow.
+    Derive the smallest compatible design that satisfies this task without changing
+    public contracts unless explicitly requested.
+  - >
+    Identify how existing agent types are registered, scaffolded, and validated.
+    Mirror those conventions for creative-generation rather than creating a special-case path.
+  - >
+    Implement only the minimal structure required for the requested capability.
+    Separate contracts, registration or catalog logic, generation wiring, template files,
+    and generated runtime-facing files where relevant.
+  - >
+    Ensure the generated creative-generation template includes the minimum coherent set
+    of files expected by current starter patterns, including schema, config, agent entry,
+    and any directly required supporting files.
+  - >
+    Keep the design adapter-friendly so the current implementation can later move
+    behind another boundary with minimal contract churn.
+  - >
+    Preserve ownership boundaries of existing subsystems. Do not move responsibility
+    into a new subsystem unless this task explicitly requires it.
+  - >
+    Ensure the current runtime continues to receive and execute the implemented behavior
+    through the existing flow, not through a newly invented architecture.
+  - >
+    Prefer small, composable files and explicit naming. Prefer stable identifiers over
+    implicit conventions unless an implicit convention already exists and is required.
+  - >
+    Update only the minimal integration points required for the requested behavior.
+    Register the creative-generation template wherever agent types are currently selected
+    or resolved, but do not expand selection semantics.
+  - >
+    Add or update tests for scaffold generation, expected file output, and any important
+    invariants around template registration or generated content shape.
+  - >
+    Add coverage for the main happy path and important protection cases, such as ensuring
+    creative-generation output uses existing conventions and does not alter unrelated
+    template behavior.
+  - >
+    Preserve existing behavior where already defined. If an implementation choice is
+    unclear, choose the narrowest option that satisfies the task without widening scope.
+
+expected_deliverables:
+  - "creative-generation template implementation files aligned with existing starter conventions"
+  - "minimal template registration or generator wiring needed for selection and scaffold output"
+  - "tests covering scaffolded creative-generation behavior and changed integration points"
+  - "no unrelated edits"
+
+implementation_rules:
+  - "prefer existing project conventions over inventing new ones"
+  - "prefer stable ids over implicit file-path-based behavior"
+  - "prefer explicit registries or template maps over hidden auto-discovery unless auto-discovery already exists"
+  - "keep future extraction or replacement obvious in naming and boundaries"
+  - "avoid placeholder architecture that is not exercised by the current runtime flow"
+
+validation_steps:
+  - "run relevant tests"
+  - "run typecheck"
+  - "confirm only intended files changed"
+  - "confirm the starter can generate the creative-generation template through the current flow"
+
+output_format:
+  - "Provide a concise summary of what changed"
+  - "List files created and files modified"
+  - "State any contract assumptions preserved"
+  - "State test coverage added or updated"
+  - "State validation results for tests and typecheck"
+  - "Call out unresolved risks briefly, only if real"

@@ -1,5 +1,28 @@
 export const goals = [
   {
+    name: "staged-transformation",
+    description:
+      "Transform an input into a final output through ordered dependent stages, where each stage builds on the result of the last.",
+    suitedAgents: ["creative-generation", "data-analyst-debugger", "educational"],
+    recommendedTools: [
+      "input",
+      "transform",
+      "generate",
+      "refine",
+      "export"
+    ],
+    outcomes: [
+      "transformed asset",
+      "refined deliverable",
+      "final export-ready output"
+    ],
+    examples: [
+      "Take source images through a structured creative pipeline to produce final linework art.",
+      "Process an input through a fixed sequence of transformation stages to reach a polished result.",
+      "Generate an initial output, refine it in order, and deliver a completed final asset."
+    ]
+  },
+  {
     name: "onboarding-checklist",
     description: "Create and execute a stepwise onboarding plan.",
     suitedAgents: ["personal-workflow-assistant", "dev-infrastructure"],

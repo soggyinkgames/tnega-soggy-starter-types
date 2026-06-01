@@ -48,13 +48,13 @@ tasks:
 
             // 3) Choose framework (after orchestration)
             const orchConfig = (await import(path.resolve("packages", orchType, "config.ts"))).default;
-            let framework = orchConfig.default_tooling;
+            let framework = orchConfig.default_framework;
             const { useDefaultFramework } = await inquirer.prompt([
               { type: "confirm", name: "useDefaultFramework", message: `Use recommended framework (${framework})?`, default: true },
             ]);
             if (!useDefaultFramework) {
               const { fwSelection } = await inquirer.prompt([
-                { type: "list", name: "fwSelection", message: "Choose from available frameworks:", choices: orchConfig.supported_tooling },
+                { type: "list", name: "fwSelection", message: "Choose from available frameworks:", choices: orchConfig.supported_framework },
               ]);
               framework = fwSelection;
             }

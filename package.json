@@ -11,10 +11,9 @@
     "test:watch": "vitest watch",
     "new-agent": "tsx scripts/new-agent.ts",
     "agent": "tsx scripts/run-agent.ts",
-    "test:tools": "tsx ./scripts/test-tools.ts",
-    "test:tools": "vitest -c vitest.tools.config.ts run",
-    "test:scripts": "vitest -c vitest.scripts.config.ts run",
-    "test:orch": "vitest -c vitest.orch.config.ts run",
+    "test:tools": "vitest run tests/tools tools",
+    "test:scripts": "vitest run scripts/tests",
+    "test:orch": "vitest run packages/orch-",
     "ui:dev": "cd ui/astro && npm run dev",
     "ui:build": "cd ui/astro && npm run build",
     "ui:preview": "cd ui/astro && npm run preview"
@@ -23,6 +22,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",
     "@types/node": "^24.7.1",

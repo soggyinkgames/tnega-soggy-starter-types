@@ -28,10 +28,26 @@ User-visible behavior:
 - [x] (2025-11-08 00:00Z) Connect orchestration → eval selection (strategy decides eval type) and orchestration → memory selection.
 - [x] (2025-11-08 00:00Z) Implement test harness with observable outputs and JSON artifacts.
 - [x] (2025-11-26 00:00Z) Refactored orch-centralised and orch-concurrent specs to match controller delegation, per-index inputs, and error isolation.
+- [x] (2026-03-11 00:00Z) Added canonical tool catalog + deterministic resolver with controlled categories and protection tests (src/tools/*, tests/tools/*).
+- [x] (2026-03-16 00:00Z) Build local tools catalog under src/tools with runtime wiring and tests (task: build-local-tools-catalog).
+- [x] (2026-06-01 00:00Z) Tighten generated creative agents and run-agent failure handling so generated sequential agents use injected tools cleanly and failed orchestration runs fail the command.
 - [ ] Validate end-to-end on a sample scenario (e.g., “generate pitch deck”).
 - [ ] Document outcomes and finalize.
 
+### Current Task - tighten-generated-agent-runtime-loop (2026-06-01)
+
+- Status: Ready for focused validation in a working Node shell.
+- Goal: Make generated creative agents cleaner and make `run-agent` report orchestration failures as command failures.
+- Success criteria: `new-agent` no longer copies template-rendering tests into generated agents; creative agents validate the injected tool runtime context locally instead of importing a helper from `src/tools`; `run-agent` fails when orchestration history records an agent/tool error; docs show the `--no-evals` run path.
+- Constraints: keep this separate from the local tools catalog commit; do not add dependencies; do not introduce new runtime abstractions.
+- Non-goals: do not implement real model/image generation in this task; do not redesign orchestration; do not add generated-agent test scaffolding until the expected generated-agent test contract is explicit.
+- Pattern: generated agent owns its runtime-context validation, orchestration owns selected tool injection, `run-agent` owns surfacing run failure.
+
 ## Surprises & Discoveries
+
+- Observation: TypeScript typecheck (tsc --noEmit) currently fails due to existing NodeNext path/extension issues in scripts/ and ui/ files; outside current tools catalog scope, left unchanged.
+  Evidence: tsc errors for missing .js extensions in scripts/helpers/load.ts and ui/* imports, plus template import resolution.
+  Action: Not addressed in this task; keep scope limited to tools catalog.
 
 - Observation: CODEEXECPLAN.md previously showed encoding artifacts for em-dashes.
   Evidence: occurrences of “â€”” in headings and lists.
@@ -40,6 +56,46 @@ User-visible behavior:
 - Observation: Existing scripts were unintentionally touched during an earlier pass.
   Evidence: package.json duplicate script entries; modified scripts/new-agent.ts and scripts/run-agent.ts.
   Action: Restored original scripts via checkout; ensured all new functionality is additive under new files only.
+
+- Observation: `creative-generation` was not previously closed end-to-end even though the repo already had nearby starter, orchestration, and runtime pieces.
+  Evidence: `scripts/new-agent.ts` still relied on generic generation for this type, sequential orchestration did not select tool collections from creative config, and no local `creative.*` tools existed in `src/tools`.
+  Action: Close the loop through minimal template registration, explicit generated config metadata, sequential tool-collection selection, deterministic collection mapping, and shared runtime execution.
+
+- Observation: The earlier in-progress creative-generation work encoded the wrong contract by using `creativeMode` plus one broad `creative-generation-core` process as the type model.
+  Evidence: scaffolded config and selection logic assumed a universal chain instead of explicit source compatibility, output target, and tooling-family declarations.
+  Action: Repair the contract to `inputKinds`, `outputTargets`, and `toolingProfile`; keep runtime tool selection in sequential orchestration and limit shared processing to justified ordered collections only.
+
+- Observation: Generated or stale `.js` mirrors can shadow the repaired TypeScript path and pollute the worktree.
+  Evidence: untracked compiled artifacts such as `scripts/new-agent.js`, package eval `index.js` files, and a generated `agents/creativityisdead/` scaffold appeared during validation.
+  Action: Remove the untracked artifacts and keep only the source files that belong to the creative-generation repair.
+
+- Observation: Focused Vitest runs that invoke Node from this workspace can require escalated execution because sandboxed Node hits a Windows profile permission issue.
+  Evidence: sandboxed runs fail with `EPERM lstat 'C:\\Users\\Anai Araya'`.
+  Action: Use escalated validation commands only for the affected test paths.
+
+- Observation: A generic workflow validator can accidentally become destructive if it narrows shared state and drops agent-specific declaration fields on the way through.
+  Evidence: the first shared-tool pass stripped `agentType` and `defaultOrchestration` from `state.config`, which broke generated creative agents when they revalidated intermediate state.
+  Action: validate the shared workflow fields without discarding extra config metadata; keep the creative public output contract at the agent boundary instead of in the shared tool.
+
+- Observation: The current creative-generation path still carries duplicated specialization logic across the CLI, orchestration, and the current profile file.
+  Evidence: `scripts/new-agent.ts`, `packages/orch-sequential/tools.ts`, and `src/tools/profiles/creativeGeneration.ts` each describe overlapping creative specialization behavior.
+  Action: collapse to one source of truth for specialization behavior, keep `new-agent` as a composition layer only, and remove redundant fields or indirection that do not carry unique behavior.
+
+- Observation: The generated creative output was recording only the first selected tool collection even though sequential orchestration already computes an ordered collection list.
+  Evidence: `packages/orch-sequential/index.ts` passed both `selectedToolCollection` and `selectedToolCollections`, while the creative template output shape only kept the singular field.
+  Action: keep the ordered `selectedToolCollections` list through the generated creative agent output and remove the redundant singular field from the creative path.
+
+- Observation: Generated agents were receiving the creative template's own rendering test.
+  Evidence: `agents/this-time/test.spec.ts` contained template fixture/rendering code and placeholder replacement assertions.
+  Action: stop copying `test.spec.ts` from template optional files; keep template-rendering tests in the template directory only.
+
+- Observation: `run-agent` could print success even when an orchestration captured an agent/tool error in its history.
+  Evidence: `runAgentCommand` returned `orchestrationResult.result` without checking `orchestrationResult.history`.
+  Action: fail `runAgentCommand` when orchestration history contains an error and cover it in `scripts/tests/run-agent.spec.ts`.
+
+- Observation: `src/tools/executionContext.ts` was not part of catalog, collection resolution, or local runtime execution.
+  Evidence: it was only used by creative generated/template code as a runtime-context shape check.
+  Action: move that check into the creative agent template and delete the shared helper from `src/tools`.
 
 ## Decision Log
 
@@ -79,7 +135,64 @@ User-visible behavior:
   Rationale: Remove custom runner duplication; ensure reliable discovery across environments.
   Date/Author: 2025-11-08 / codex
 
+- Decision: Adopt local-first adapter boundary for tools (catalog-driven resolution, orchestration-selected collections, runtime execution via shared contracts) to enable later API swap without changing agent-facing behavior.
+  Rationale: Aligns with build-local-tools-catalog task; keeps contracts stable while preparing for future API-backed tools.
+  Date/Author: 2026-03-16 / codex
+
+- Decision: Define `creative-generation` by explicit declarations: `inputKinds`, `outputTargets`, and `toolingProfile`; do not persist raw runtime tool collections in generated config for this type.
+  Rationale: Keeps the scaffold stable and adaptable while preserving orchestration ownership of runtime tool selection.
+  Date/Author: 2026-03-16 / codex
+
+- Decision: Narrow `creative-generation-core` to shared source preparation and add target-specific ordered collections for line-art and music tooling profiles.
+  Rationale: Avoids forcing unlike creative targets through one fake universal process while keeping future profile growth additive.
+  Date/Author: 2026-03-16 / codex
+
+- Decision: Validate creative-generation context after each tool and validate final output at the agent boundary.
+  Rationale: Makes the loop trustworthy and ensures malformed intermediate state fails explicitly instead of silently propagating.
+  Date/Author: 2026-03-16 / codex
+
+- Decision: Restructure local creative tools by capability boundary (`ingest`, `normalize`, `derive`, `assemble`, `validate`, `profiles`) and select workflow-specific collections from those capability-defined tools.
+  Rationale: Keeps tool identity tied to executable responsibility instead of the current agent type, which scales better as more targets and agent types reuse the same operations.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Keep executable tool ids honest about the concrete contract they produce, and extract reusable assembly logic into helpers instead of overstating tool generality.
+  Rationale: Preserves clean reuse without hiding that the current assembly tool still emits the `CreativeGenerationOutput` contract.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Shared local tools should be named and typed by the transformation they perform, with reusable workflow state and payload contracts; agent templates remain responsible for shaping agent-specific public outputs.
+  Rationale: Keeps the tool layer reusable and operation-first while preserving explicit agent output contracts at the generated agent boundary.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: `new-agent` is a composition layer, not a behavior layer. It may discover available choices and substitute placeholders into template files, but it must not define or duplicate agent-type behavior that already belongs to templates, orchestration, or shared tooling.
+  Rationale: Prevents parallel logic paths and keeps each subsystem within a single responsibility boundary.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Creative-generation specialization metadata now lives in `templates/agent-types/3-creative-generation/scaffold.ts`, and `new-agent` only consumes that metadata to instantiate files. The prior shared profile file under `src/tools/profiles` was removed.
+  Rationale: Specialization choices are part of the creative template boundary, not the shared tools boundary or the CLI itself.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Remove `toolingProfile` from the creative-generation execution path and select sequential collections directly from declared goal profile, input kinds, and output targets.
+  Rationale: The profile layer was redundant for the current loop and was causing duplicated specialization logic across the CLI, orchestration, and tools.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Remove creative-template alias fields (`agent_type`, `default_orch`, `goals`, nested `tooling.profile`) from the generated creative config and keep only the fields actively used by the current creative loop.
+  Rationale: The system is being built now, so transitional compatibility aliases would only add residue and blur the generated config shape.
+  Date/Author: 2026-03-17 / codex
+
+- Decision: Do not copy template test files into generated agents.
+  Rationale: Template tests validate scaffold rendering; generated agents should contain runnable agent code, not template-development fixtures.
+  Date/Author: 2026-06-01 / codex
+
+- Decision: Keep generated-agent tool context validation in the generated/template agent boundary, not in `src/tools`.
+  Rationale: `src/tools` should remain catalog, collection resolution, resolver, runtime, and concrete tools; agent-context validation belongs to the generated agent contract.
+  Date/Author: 2026-06-01 / codex
+
+- Decision: `run-agent` must treat orchestration-recorded agent errors as run failures.
+  Rationale: A command that silently reports success after a tool or agent failure is not a reliable end-to-end validation path.
+  Date/Author: 2026-06-01 / codex
+
 ## Outcomes & Retrospective
+
 
 Summarize results, gaps, and lessons learned at completion.
 
@@ -581,3 +694,4 @@ Describe any changes made to this plan, the reason, and the date here. For examp
  - On 2025-11-08, removed `scripts/test-orch.ts` to prevent duplication; updated package script to run Vitest on `packages/orch-*/**/*.spec.ts`.
 - On 2025-11-26, refactored `packages/orch-centralised/centralised.spec.ts` to cover new-agent creation via controller delegation and updated error-handling expectations.
 - On 2025-11-26, expanded `packages/orch-concurrent/concurrent.spec.ts` to assert per-index inputs, context wiring, duration, and error isolation.
+- On 2026-06-01, tightened generated creative agents and `run-agent`: stopped copying template tests into generated agents, moved tool context validation into the creative agent template, made `run-agent` fail on orchestration-recorded errors, and documented `--no-evals` usage.

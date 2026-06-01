@@ -2,6 +2,8 @@
 import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
+import { executeTool as executeLocalTool } from "../../src/tools/runtime";
+import { resolveSequentialAgentToolRuntime } from "./tools";
 
 export class SequentialOrch implements OrchestrationPattern {
   id = config.id;
@@ -34,11 +36,42 @@ export class SequentialOrch implements OrchestrationPattern {
       };
 
       try {
+        const {
+          selectedToolCollections,
+          selectedToolIds,
+          declaredRequiredTools,
+        } = resolveSequentialAgentToolRuntime({
+          id: agent.id,
+          config: agent.config,
+          requiredTools: agent.requiredTools,
+        });
+
         const output = await agent.run(current, {
           mode: "sequential",
           step: i,
           runOrchFramework,
-          history
+          history,
+          selectedToolCollections,
+          selectedToolIds,
+          declaredRequiredTools,
+          // Keep this executeTool(toolId, state) contract stable: today it calls
+          // local tools, later it can call a tools API without changing generated agents.
+          executeTool: (toolId: string, spec: any) => {
+            if (!selectedToolIds.includes(toolId)) {
+              throw new Error(
+                `Sequential tooling denied unselected tool "${toolId}" for agent "${agent.id}".`,
+              );
+            }
+
+            return executeLocalTool(toolId, spec, {
+              agentId: agent.id,
+              orchestrationId: this.id,
+              step: i,
+              selectedToolCollections,
+              selectedToolIds,
+              history,
+            });
+          },
         });
 
         entry.output = output;
