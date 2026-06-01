@@ -153,6 +153,15 @@ describe("creative-generation template", () => {
         await fs.rm(tempRoot, { recursive: true, force: true });
     });
 
+    it("requires orchestration-provided tool execution context", async () => {
+        const { runAgent, tempRoot } = await renderCreativeTemplateFixture();
+
+        await expect(runAgent({ prompt: "Poster idea" })).rejects.toThrow(
+            "Creative generation run requires orchestration-selected tools and executeTool()."
+        );
+        await fs.rm(tempRoot, { recursive: true, force: true });
+    });
+
     it("fails predictably on invalid final output shape", async () => {
         const { runAgent, tempRoot } = await renderCreativeTemplateFixture();
 

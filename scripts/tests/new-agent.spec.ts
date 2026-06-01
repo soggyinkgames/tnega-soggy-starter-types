@@ -470,7 +470,7 @@ export default {
         expect(existsSync(path.join(tempRoot, "agents/creative-agent/eval.ts"))).toBe(true);
         expect(existsSync(path.join(tempRoot, "agents/creative-agent/schema.ts"))).toBe(true);
         expect(existsSync(path.join(tempRoot, "agents/creative-agent/plan.md"))).toBe(true);
-        expect(existsSync(path.join(tempRoot, "agents/creative-agent/test.spec.ts"))).toBe(true);
+        expect(existsSync(path.join(tempRoot, "agents/creative-agent/test.spec.ts"))).toBe(false);
         expect(existsSync(path.join(tempRoot, "agents/creative-agent/evals.ts"))).toBe(false);
 
         process.chdir(originalCwd);
