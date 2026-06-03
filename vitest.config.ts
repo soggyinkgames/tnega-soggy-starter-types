@@ -8,6 +8,7 @@ export default defineConfig({
       "tools/**/*.spec.ts",
       "packages/**/*.spec.ts",
       "scripts/tests/**/*.spec.ts",
+      "templates/**/*.spec.ts",
     ],
     environment: "node",
     globals: true,

@@ -7,6 +7,7 @@ export default {
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",
     evals: ["regression", "system"],
+    capabilities: { chat: true },
     deploy: "vercel",
     ci: "github",
 };
