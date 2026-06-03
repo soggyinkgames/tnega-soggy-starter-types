@@ -18,7 +18,7 @@ beforeAll(async () => {
   await fs.ensureDir(agentDir);
   const indexTs = `export async function runAgent(query: string){ return { output: \`Echo:${'${'}query${'}'}\` }; }`;
   await fs.writeFile(path.join(agentDir, "index.ts"), indexTs, "utf8");
-  const configTs = `export default { id: "${AGENT_NAME}", evals: [] };`;
+  const configTs = `export default { id: "${AGENT_NAME}", evals: [], capabilities: { chat: true } };`;
   await fs.writeFile(path.join(agentDir, "config.ts"), configTs, "utf8");
   const evalTs = `throw new Error("eval module should not load during runAgentCommand");`;
   await fs.writeFile(path.join(agentDir, "eval.ts"), evalTs, "utf8");
@@ -36,6 +36,7 @@ export default {
   id: "${ORCH_AGENT_NAME}",
   evals: ["basic"],
   defaultOrchestration: "sequential",
+  capabilities: { chat: true },
 };
 `;
   await fs.writeFile(path.join(orchAgentDir, "config.ts"), orchConfigTs, "utf8");
@@ -73,7 +74,7 @@ describe("runAgentCommand", () => {
       agentsRoot,
     });
 
-    expect(result.config).toEqual({ id: AGENT_NAME, evals: [] });
+    expect(result.config).toEqual({ id: AGENT_NAME, evals: [], capabilities: { chat: true } });
     expect(result.orchestrationId).toBeNull();
     expect(result.output).toEqual({ output: "Echo:hello world" });
     expect(result.displayOutput).toBe("Echo:hello world");
@@ -136,6 +137,29 @@ describe("runAgentCommand", () => {
         orchestrationRegistry: {},
       }),
     ).rejects.toThrow('No orchestration runner is registered for "orch-sequential".');
+  });
+
+  it("fails when config does not enable chat capability", async () => {
+    const agentDir = path.join(agentsRoot, "__missing-chat-agent");
+    await fs.ensureDir(agentDir);
+    await fs.writeFile(
+      path.join(agentDir, "index.ts"),
+      `export async function runAgent(){ return { output: "ok" }; }`,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(agentDir, "config.ts"),
+      `export default { id: "__missing-chat-agent", evals: [] };`,
+      "utf8",
+    );
+
+    await expect(
+      runAgentCommand({
+        agentName: "__missing-chat-agent",
+        query: "hello world",
+        agentsRoot,
+      }),
+    ).rejects.toThrow("Agent config requires enabled chat capability at capabilities.chat.");
   });
 
   it("fails when orchestration records an agent error", async () => {

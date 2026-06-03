@@ -21,6 +21,7 @@ const creativeTemplateReplacements: Record<string, string> = {
     "__INPUT_KINDS_JSON__": JSON.stringify(["prompt-text", "image-photo", "reference-set"]),
     "__OUTPUT_TARGETS_JSON__": JSON.stringify(["line-art"]),
     "__EVALS_JSON__": JSON.stringify(["modelgraded", "safety"]),
+    "__CAPABILITIES_JSON__": JSON.stringify({ chat: true }),
     "__MEMORY_PROVIDER__": "redis",
     "__FRAMEWORK__": "langgraph",
 };

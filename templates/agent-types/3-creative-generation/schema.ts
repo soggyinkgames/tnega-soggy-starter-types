@@ -45,6 +45,9 @@ export type CreativeGenerationConfig = {
     inputKinds: CreativeInputKind[];
     outputTargets: CreativeOutputTarget[];
     evals?: string[];
+    capabilities: {
+        chat: true;
+    };
     memory?: {
         provider?: string;
     };
@@ -286,6 +289,10 @@ export function assertCreativeGenerationConfig(raw: unknown): CreativeGeneration
         throw new Error("CreativeGenerationConfig.goalProfile is required.");
     }
 
+    if (!isRecord(raw.capabilities) || raw.capabilities.chat !== true) {
+        throw new Error("CreativeGenerationConfig.capabilities.chat must be enabled.");
+    }
+
     const inputKinds = assertAllowedStringArray(
         raw.inputKinds,
         "CreativeGenerationConfig.inputKinds",
@@ -307,6 +314,9 @@ export function assertCreativeGenerationConfig(raw: unknown): CreativeGeneration
         evals: Array.isArray(raw.evals)
             ? raw.evals.filter((evalId): evalId is string => typeof evalId === "string")
             : undefined,
+        capabilities: {
+            chat: true,
+        },
         memory: isRecord(raw.memory)
             ? {
                 provider: firstString(raw.memory.provider),
