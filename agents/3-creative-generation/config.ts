@@ -10,7 +10,11 @@ export default {
         provider: "supabase",
     },
     framework: "langchain",
-    capabilities: { chat: true },
+    capabilities: {
+        enabled: ["chat"],
+        availableOnRequest: [],
+        disallowed: [],
+    },
     deploy: "vercel",
     ci: "github",
     llm: "openai:gpt-4-turbo",

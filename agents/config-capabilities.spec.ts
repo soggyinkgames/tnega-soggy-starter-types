@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { assertAgentConfigCapabilities } from "../scripts/helpers/agentCapabilities.js";
 import knowledgeInsightConfig from "./1-knowledge-insight/config.js";
 import strategyConfig from "./2-strategy/config.js";
 import creativeGenerationConfig from "./3-creative-generation/config.js";
@@ -21,7 +22,24 @@ const agentConfigs = [
 ] as const;
 
 describe("agent config capabilities", () => {
-    it.each(agentConfigs)("%s enables chat capability", (_agentName, config) => {
-        expect(config.capabilities).toEqual({ chat: true });
+    it.each(agentConfigs)("%s declares runtime-expandable capabilities", (_agentName, config) => {
+        expect(config.capabilities).toEqual({
+            enabled: ["chat"],
+            availableOnRequest: [],
+            disallowed: [],
+        });
+    });
+
+    it("rejects malformed capability config", () => {
+        expect(() =>
+            assertAgentConfigCapabilities({
+                id: "bad-agent",
+                capabilities: {
+                    enabled: [],
+                    availableOnRequest: "tools",
+                    disallowed: [],
+                },
+            })
+        ).toThrow("Agent config capabilities must define enabled, availableOnRequest, and disallowed string arrays with chat enabled.");
     });
 });

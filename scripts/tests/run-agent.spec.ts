@@ -8,6 +8,12 @@ import { runAgentCommand, runAgentEvals } from "../run-agent-runtime.js";
 
 const AGENT_NAME = "__test-agent";
 const ORCH_AGENT_NAME = "__test-sequential-agent";
+const CAPABILITIES_TEXT = `capabilities: { enabled: ["chat"], availableOnRequest: [], disallowed: [] }`;
+const CAPABILITIES = {
+  enabled: ["chat"],
+  availableOnRequest: [],
+  disallowed: [],
+};
 
 let agentsRoot: string;
 
@@ -18,7 +24,7 @@ beforeAll(async () => {
   await fs.ensureDir(agentDir);
   const indexTs = `export async function runAgent(query: string){ return { output: \`Echo:${'${'}query${'}'}\` }; }`;
   await fs.writeFile(path.join(agentDir, "index.ts"), indexTs, "utf8");
-  const configTs = `export default { id: "${AGENT_NAME}", evals: [], capabilities: { chat: true } };`;
+  const configTs = `export default { id: "${AGENT_NAME}", evals: [], ${CAPABILITIES_TEXT} };`;
   await fs.writeFile(path.join(agentDir, "config.ts"), configTs, "utf8");
   const evalTs = `throw new Error("eval module should not load during runAgentCommand");`;
   await fs.writeFile(path.join(agentDir, "eval.ts"), evalTs, "utf8");
@@ -36,7 +42,7 @@ export default {
   id: "${ORCH_AGENT_NAME}",
   evals: ["basic"],
   defaultOrchestration: "sequential",
-  capabilities: { chat: true },
+  capabilities: { enabled: ["chat"], availableOnRequest: [], disallowed: [] },
 };
 `;
   await fs.writeFile(path.join(orchAgentDir, "config.ts"), orchConfigTs, "utf8");
@@ -74,7 +80,7 @@ describe("runAgentCommand", () => {
       agentsRoot,
     });
 
-    expect(result.config).toEqual({ id: AGENT_NAME, evals: [], capabilities: { chat: true } });
+    expect(result.config).toEqual({ id: AGENT_NAME, evals: [], capabilities: CAPABILITIES });
     expect(result.orchestrationId).toBeNull();
     expect(result.output).toEqual({ output: "Echo:hello world" });
     expect(result.displayOutput).toBe("Echo:hello world");
@@ -139,7 +145,7 @@ describe("runAgentCommand", () => {
     ).rejects.toThrow('No orchestration runner is registered for "orch-sequential".');
   });
 
-  it("fails when config does not enable chat capability", async () => {
+  it("fails when config has malformed capabilities", async () => {
     const agentDir = path.join(agentsRoot, "__missing-chat-agent");
     await fs.ensureDir(agentDir);
     await fs.writeFile(
@@ -149,7 +155,7 @@ describe("runAgentCommand", () => {
     );
     await fs.writeFile(
       path.join(agentDir, "config.ts"),
-      `export default { id: "__missing-chat-agent", evals: [] };`,
+      `export default { id: "__missing-chat-agent", evals: [], capabilities: { enabled: [], availableOnRequest: "tools", disallowed: [] } };`,
       "utf8",
     );
 
@@ -159,7 +165,7 @@ describe("runAgentCommand", () => {
         query: "hello world",
         agentsRoot,
       }),
-    ).rejects.toThrow("Agent config requires enabled chat capability at capabilities.chat.");
+    ).rejects.toThrow("Agent config capabilities must define enabled, availableOnRequest, and disallowed string arrays with chat enabled.");
   });
 
   it("fails when orchestration records an agent error", async () => {
