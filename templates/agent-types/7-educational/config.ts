@@ -7,7 +7,11 @@ export default {
     vectorStore: "pgvector",
     llm: "openai:gpt-4-turbo",
     evals: ["modelgraded", "safety"],
-    capabilities: { chat: true },
+    capabilities: {
+        enabled: ["chat"],
+        availableOnRequest: [],
+        disallowed: [],
+    },
     deploy: "vercel",
     ci: "github",
 };

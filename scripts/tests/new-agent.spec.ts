@@ -338,7 +338,10 @@ export default {
         expect(configText).toContain(`default_orch: "orch-sequential"`);
         expect(configText).toContain(`framework: "langgraph"`);
         expect(configText).toContain(`capabilities`);
-        expect(configText).toContain(`"chat": true`);
+        expect(configText).toContain(`"enabled": [`);
+        expect(configText).toContain(`"chat"`);
+        expect(configText).toContain(`"availableOnRequest": []`);
+        expect(configText).toContain(`"disallowed": []`);
         expect(configText).toContain(`provider: "supabase"`);
         expect(configText).toContain(`"retrieve-and-summarize"`);
 
@@ -392,7 +395,10 @@ export default {
 
         expect(configText).toContain(`id: "prefilled-agent"`);
         expect(configText).toContain(`"answer-with-citations"`);
-        expect(configText).toContain(`"chat": true`);
+        expect(configText).toContain(`"enabled": [`);
+        expect(configText).toContain(`"chat"`);
+        expect(configText).toContain(`"availableOnRequest": []`);
+        expect(configText).toContain(`"disallowed": []`);
         expect(configText).toContain(`framework: "custom-runtime"`);
         expect(configText).toContain(`provider: "redis"`);
 
@@ -446,7 +452,7 @@ export default {
         );
     });
 
-    it("scaffolds centralised orchestration agents with chat capability", async () => {
+    it("scaffolds centralised orchestration agents with runtime-expandable capabilities", async () => {
         process.argv = [
             "node",
             "new-agent.ts",
@@ -464,10 +470,13 @@ export default {
 
         const configText = await readFile("agents/central-chat-agent/config.ts");
         expect(configText).toContain(`default_orch: "orch-centralised"`);
-        expect(configText).toContain(`"chat": true`);
+        expect(configText).toContain(`"enabled": [`);
+        expect(configText).toContain(`"chat"`);
+        expect(configText).toContain(`"availableOnRequest": []`);
+        expect(configText).toContain(`"disallowed": []`);
     });
 
-    it("scaffolds hierarchical orchestration agents with chat capability", async () => {
+    it("scaffolds hierarchical orchestration agents with runtime-expandable capabilities", async () => {
         process.argv = [
             "node",
             "new-agent.ts",
@@ -485,7 +494,10 @@ export default {
 
         const configText = await readFile("agents/hierarchy-chat-agent/config.ts");
         expect(configText).toContain(`default_orch: "orch-hierarchical"`);
-        expect(configText).toContain(`"chat": true`);
+        expect(configText).toContain(`"enabled": [`);
+        expect(configText).toContain(`"chat"`);
+        expect(configText).toContain(`"availableOnRequest": []`);
+        expect(configText).toContain(`"disallowed": []`);
     });
 
     it("prefers existing agent config evals over template/orchestration defaults when rerunning", async () => {
@@ -578,7 +590,11 @@ export default {
             outputTargets: ["line-art"],
             framework: "langgraph",
             evals: ["modelgraded", "safety"],
-            capabilities: { chat: true },
+            capabilities: {
+                enabled: ["chat"],
+                availableOnRequest: [],
+                disallowed: [],
+            },
         });
         expect(configModule.default.memory).toEqual({ provider: "supabase" });
         expect(configModule.default.toolCollections).toBeUndefined();

@@ -27,7 +27,11 @@ const creativeTemplateReplacements: Record<string, string> = {
         "assemble.output-payload",
     ]),
     "__EVALS_JSON__": JSON.stringify(["modelgraded", "safety"]),
-    "__CAPABILITIES_JSON__": JSON.stringify({ chat: true }),
+    "__CAPABILITIES_JSON__": JSON.stringify({
+        enabled: ["chat"],
+        availableOnRequest: [],
+        disallowed: [],
+    }),
     "__MEMORY_PROVIDER__": "redis",
     "__FRAMEWORK__": "langgraph",
 };
@@ -71,10 +75,14 @@ async function renderCreativeTemplateFixture() {
 }
 
 describe("creative-generation template", () => {
-    it("enables chat capability", async () => {
+    it("declares runtime-expandable capabilities", async () => {
         const { config, tempRoot } = await renderCreativeTemplateFixture();
 
-        expect(config.capabilities).toEqual({ chat: true });
+        expect(config.capabilities).toEqual({
+            enabled: ["chat"],
+            availableOnRequest: [],
+            disallowed: [],
+        });
         await fs.rm(tempRoot, { recursive: true, force: true });
     });
 
@@ -103,13 +111,17 @@ describe("creative-generation template", () => {
             defaultOrchestration: "sequential",
             inputKinds: ["prompt-text", "image-photo", "reference-set"],
             outputTargets: ["line-art"],
-            capabilities: { chat: true },
+            capabilities: {
+                enabled: ["chat"],
+                availableOnRequest: [],
+                disallowed: [],
+            },
             framework: "langgraph",
         });
         await fs.rm(tempRoot, { recursive: true, force: true });
     });
 
-    it("rejects config without chat capability", async () => {
+    it("rejects malformed capability config", async () => {
         const {
             assertCreativeGenerationConfig,
             config,
@@ -119,9 +131,13 @@ describe("creative-generation template", () => {
         expect(() =>
             assertCreativeGenerationConfig({
                 ...config,
-                capabilities: {},
+                capabilities: {
+                    enabled: [],
+                    availableOnRequest: "tools",
+                    disallowed: [],
+                },
             })
-        ).toThrow("CreativeGenerationConfig.capabilities.chat must be enabled.");
+        ).toThrow("CreativeGenerationConfig.capabilities must define enabled, availableOnRequest, and disallowed string arrays with chat enabled.");
         await fs.rm(tempRoot, { recursive: true, force: true });
     });
 

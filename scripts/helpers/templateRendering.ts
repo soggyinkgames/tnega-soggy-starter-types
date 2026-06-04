@@ -13,7 +13,11 @@ export type TemplateVariableInput = {
   tools: string[];
   evals: string[];
   memoryProvider: string;
-  capabilities: Record<string, boolean>;
+  capabilities: {
+    enabled: readonly string[];
+    availableOnRequest: readonly string[];
+    disallowed: readonly string[];
+  };
   inputKinds: string[];
   outputTargets: string[];
 };

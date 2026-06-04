@@ -21,7 +21,11 @@ const agentConfigs = [
 ] as const;
 
 describe("agent config capabilities", () => {
-    it.each(agentConfigs)("%s enables chat capability", (_agentName, config) => {
-        expect(config.capabilities).toEqual({ chat: true });
+    it.each(agentConfigs)("%s declares runtime-expandable capabilities", (_agentName, config) => {
+        expect(config.capabilities).toEqual({
+            enabled: ["chat"],
+            availableOnRequest: [],
+            disallowed: [],
+        });
     });
 });

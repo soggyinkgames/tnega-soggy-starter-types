@@ -46,7 +46,9 @@ export type CreativeGenerationConfig = {
     outputTargets: CreativeOutputTarget[];
     evals?: string[];
     capabilities: {
-        chat: true;
+        enabled: string[];
+        availableOnRequest: string[];
+        disallowed: string[];
     };
     memory?: {
         provider?: string;
@@ -289,8 +291,17 @@ export function assertCreativeGenerationConfig(raw: unknown): CreativeGeneration
         throw new Error("CreativeGenerationConfig.goalProfile is required.");
     }
 
-    if (!isRecord(raw.capabilities) || raw.capabilities.chat !== true) {
-        throw new Error("CreativeGenerationConfig.capabilities.chat must be enabled.");
+    if (
+        !isRecord(raw.capabilities) ||
+        !Array.isArray(raw.capabilities.enabled) ||
+        !raw.capabilities.enabled.every((capability) => typeof capability === "string") ||
+        !Array.isArray(raw.capabilities.availableOnRequest) ||
+        !raw.capabilities.availableOnRequest.every((capability) => typeof capability === "string") ||
+        !Array.isArray(raw.capabilities.disallowed) ||
+        !raw.capabilities.disallowed.every((capability) => typeof capability === "string") ||
+        !raw.capabilities.enabled.includes("chat")
+    ) {
+        throw new Error("CreativeGenerationConfig.capabilities must define enabled, availableOnRequest, and disallowed string arrays with chat enabled.");
     }
 
     const inputKinds = assertAllowedStringArray(
@@ -315,7 +326,9 @@ export function assertCreativeGenerationConfig(raw: unknown): CreativeGeneration
             ? raw.evals.filter((evalId): evalId is string => typeof evalId === "string")
             : undefined,
         capabilities: {
-            chat: true,
+            enabled: [...raw.capabilities.enabled],
+            availableOnRequest: [...raw.capabilities.availableOnRequest],
+            disallowed: [...raw.capabilities.disallowed],
         },
         memory: isRecord(raw.memory)
             ? {

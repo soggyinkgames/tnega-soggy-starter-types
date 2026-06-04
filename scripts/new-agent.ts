@@ -87,7 +87,11 @@ type ExistingAgentConfig = {
     id?: string;
     agent_type?: string;
     agentType?: string;
-    capabilities?: Record<string, boolean>;
+    capabilities?: {
+        enabled?: string[];
+        availableOnRequest?: string[];
+        disallowed?: string[];
+    };
     default_orch?: string;
     defaultOrchestration?: string;
     framework?: string;

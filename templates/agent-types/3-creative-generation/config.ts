@@ -6,7 +6,11 @@ export default {
     inputKinds: JSON.parse('__INPUT_KINDS_JSON__') as string[],
     outputTargets: JSON.parse('__OUTPUT_TARGETS_JSON__') as string[],
     evals: JSON.parse('__EVALS_JSON__') as string[],
-    capabilities: JSON.parse('__CAPABILITIES_JSON__') as { chat: true },
+    capabilities: JSON.parse('__CAPABILITIES_JSON__') as {
+        enabled: string[];
+        availableOnRequest: string[];
+        disallowed: string[];
+    },
     memory: {
         provider: "__MEMORY_PROVIDER__",
     },
