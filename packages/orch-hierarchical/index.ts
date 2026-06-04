@@ -55,7 +55,7 @@ export class HierarchicalOrch implements OrchestrationPattern {
               orchestrationId: this.id,
               mode: "hierarchical",
               level: "worker",
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,
@@ -96,7 +96,7 @@ export class HierarchicalOrch implements OrchestrationPattern {
                 orchestrationId: this.id,
                 mode: "hierarchical",
                 level: "manager",
-                history,
+                history: [...history],
               });
             },
             requestCapability: runtimeContext?.requestCapability,

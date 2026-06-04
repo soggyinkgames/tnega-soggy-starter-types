@@ -72,7 +72,7 @@ export class SequentialOrch implements OrchestrationPattern {
               step: i,
               selectedToolCollections,
               selectedToolIds,
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,

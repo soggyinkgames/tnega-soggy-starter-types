@@ -51,7 +51,7 @@ export class GroupCollaborativeOrch implements OrchestrationPattern {
               orchestrationId: this.id,
               mode: "group-collaborative",
               turn: i,
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,

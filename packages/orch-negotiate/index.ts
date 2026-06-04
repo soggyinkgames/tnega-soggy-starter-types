@@ -89,7 +89,7 @@ export class NegotiateOrch implements OrchestrationPattern {
               orchestrationId: this.id,
               mode: "negotiate",
               ranking,
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,

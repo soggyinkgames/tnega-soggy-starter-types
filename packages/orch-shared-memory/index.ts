@@ -51,7 +51,7 @@ export class SharedMemoryOrch implements OrchestrationPattern {
               orchestrationId: this.id,
               mode: "shared-memory",
               index: i,
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,

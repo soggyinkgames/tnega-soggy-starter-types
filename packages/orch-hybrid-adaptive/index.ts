@@ -37,7 +37,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
                 agentId: agent.id,
                 orchestrationId: this.id,
                 mode: "hybrid-concurrent",
-                history,
+                history: [...history],
               });
             },
             requestCapability: runtimeContext?.requestCapability,
@@ -90,7 +90,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
               orchestrationId: this.id,
               mode: "hybrid-sequential",
               step: i,
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,
@@ -168,7 +168,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
               agentId: winner.id,
               orchestrationId: this.id,
               mode: "hybrid-negotiate",
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,
@@ -271,7 +271,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
               agentId: agent.id,
               orchestrationId: this.id,
               mode: "hybrid-default",
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,

@@ -54,7 +54,7 @@ export class CentralisedOrch implements OrchestrationPattern {
               agentId: target.id,
               orchestrationId: this.id,
               mode: "centralised-worker",
-              history,
+              history: [...history],
             });
           },
           requestCapability: runtimeContext?.requestCapability,
@@ -92,7 +92,7 @@ export class CentralisedOrch implements OrchestrationPattern {
             agentId: controller.id,
             orchestrationId: this.id,
             mode: "centralised",
-            history,
+            history: [...history],
           });
         },
         requestCapability: runtimeContext?.requestCapability,
