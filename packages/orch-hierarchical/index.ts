@@ -1,5 +1,5 @@
 // orchestrations/hierarchical/index.ts
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -8,12 +8,12 @@ export class HierarchicalOrch implements OrchestrationPattern {
   name = "Hierarchical Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new HierarchicalOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("HierarchicalOrch requires at least one agent");
     }
@@ -44,7 +44,21 @@ export class HierarchicalOrch implements OrchestrationPattern {
           mode: "hierarchical",
           level: "worker",
           runOrchFramework,
-          history
+          history,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Hierarchical tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: worker.id,
+              orchestrationId: this.id,
+              mode: "hierarchical",
+              level: "worker",
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         workerOutputs[worker.id] = output;
         entry.output = output;
@@ -71,7 +85,21 @@ export class HierarchicalOrch implements OrchestrationPattern {
             mode: "hierarchical",
             level: "manager",
             runOrchFramework,
-            history
+            history,
+            executeTool: (toolId: string, input: Record<string, unknown>) => {
+              if (!runtimeContext?.executeTool) {
+                throw new Error("Hierarchical tooling requires runtimeContext.executeTool().");
+              }
+
+              return runtimeContext.executeTool(toolId, input, {
+                agentId: manager.id,
+                orchestrationId: this.id,
+                mode: "hierarchical",
+                level: "manager",
+                history,
+              });
+            },
+            requestCapability: runtimeContext?.requestCapability,
           });
           managerDecisions[manager.id] = decision;
           entry.output = decision;

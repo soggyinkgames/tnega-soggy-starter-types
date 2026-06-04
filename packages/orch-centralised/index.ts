@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -7,12 +7,12 @@ export class CentralisedOrch implements OrchestrationPattern {
   name = "Centralised Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new CentralisedOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("CentralisedOrch requires at least one agent");
     }
@@ -44,7 +44,20 @@ export class CentralisedOrch implements OrchestrationPattern {
       try {
         const output = await target.run(subTask, {
           mode: "centralised-worker",
-          history
+          history,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Centralised tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: target.id,
+              orchestrationId: this.id,
+              mode: "centralised-worker",
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         entry.output = output;
         history.push(entry);
@@ -70,6 +83,19 @@ export class CentralisedOrch implements OrchestrationPattern {
         workers,
         agents,
         runSubTask,
+        executeTool: (toolId: string, input: Record<string, unknown>) => {
+          if (!runtimeContext?.executeTool) {
+            throw new Error("Centralised tooling requires runtimeContext.executeTool().");
+          }
+
+          return runtimeContext.executeTool(toolId, input, {
+            agentId: controller.id,
+            orchestrationId: this.id,
+            mode: "centralised",
+            history,
+          });
+        },
+        requestCapability: runtimeContext?.requestCapability,
         runOrchFramework // available if the controller wants to kick off sub-orchestrations
       });
 

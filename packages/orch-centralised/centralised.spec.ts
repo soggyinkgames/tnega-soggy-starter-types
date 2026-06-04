@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { CentralisedOrch } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("CentralisedOrch", () => {
   it("creates a new agent via controller + worker delegation", async () => {
@@ -88,6 +88,42 @@ describe("CentralisedOrch", () => {
     expect(controller.run).toHaveBeenCalledTimes(1);
     expect(errorWorker.run).toHaveBeenCalledTimes(1);
     expect(okWorker.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("executes controller tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const controller: Agent = {
+      id: "controller",
+      run: vi.fn(async (_task: any, ctx?: any) => {
+        return ctx.executeTool("query_knowledge_base", { query: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await CentralisedOrch.run("task", [controller], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "query_knowledge_base",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "controller",
+        orchestrationId: "orch-centralised",
+        mode: "centralised",
+        history: [],
+      }),
+    );
+    expect(res.result).toEqual({
+      query: "runtime bridge",
+      executedByRuntimeContext: true,
+    });
   });
 
   it("delegates to framework loader in runOrchFramework", async () => {

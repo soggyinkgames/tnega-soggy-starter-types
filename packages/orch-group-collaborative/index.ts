@@ -1,5 +1,5 @@
 // orchestrations/groupCollaborative/index.ts
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -8,12 +8,12 @@ export class GroupCollaborativeOrch implements OrchestrationPattern {
   name = "Group Collaborative Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new GroupCollaborativeOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("GroupCollaborativeOrch requires at least one agent");
     }
@@ -40,7 +40,21 @@ export class GroupCollaborativeOrch implements OrchestrationPattern {
           mode: "group-collaborative",
           turn: i,
           shared,
-          runOrchFramework
+          runOrchFramework,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Group collaborative tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: agent.id,
+              orchestrationId: this.id,
+              mode: "group-collaborative",
+              turn: i,
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
 
         entry.output = output;

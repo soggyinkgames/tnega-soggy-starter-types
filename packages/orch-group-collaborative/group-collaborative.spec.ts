@@ -1,7 +1,7 @@
 // orchestrations/groupCollaborative/index.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { GroupCollaborativeOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("GroupCollaborativeOrch", () => {
   it("runs agents in sequence sharing a collaborative context", async () => {
@@ -115,6 +115,48 @@ describe("GroupCollaborativeOrch", () => {
 
     expect(failingAgent.run).toHaveBeenCalledTimes(1);
     expect(okAgent.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("executes tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const agent: Agent = {
+      id: "collab-tool-agent",
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("summarize", { text: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await GroupCollaborativeOrch.run("task", [agent], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "summarize",
+      { text: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "collab-tool-agent",
+        orchestrationId: "orch-group-collaborative",
+        mode: "group-collaborative",
+        turn: 0,
+        history: [],
+      }),
+    );
+    expect(res.result).toEqual([
+      {
+        agentId: "collab-tool-agent",
+        output: {
+          text: "runtime bridge",
+          executedByRuntimeContext: true,
+        },
+      },
+    ]);
   });
 
   it("throws when no agents are provided", async () => {

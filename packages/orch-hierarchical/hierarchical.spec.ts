@@ -1,7 +1,7 @@
 // orchestrations/hierarchical/index.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { HierarchicalOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("HierarchicalOrch", () => {
   it("runs workers first, then managers with access to workerOutputs", async () => {
@@ -137,6 +137,45 @@ describe("HierarchicalOrch", () => {
     expect(res.strategy).toBe("hierarchical-fallback");
     expect(res.workerOutputs).toEqual({ "worker-only": "only-worker-output" });
     expect(res).not.toHaveProperty("managerDecisions");
+  });
+
+  it("executes worker tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const worker: Agent = {
+      id: "worker-tool-agent",
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("search", { query: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await HierarchicalOrch.run("task", [worker], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "search",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "worker-tool-agent",
+        orchestrationId: "orch-hierarchical",
+        mode: "hierarchical",
+        level: "worker",
+        history: [],
+      }),
+    );
+    expect(res.workerOutputs).toEqual({
+      "worker-tool-agent": {
+        query: "runtime bridge",
+        executedByRuntimeContext: true,
+      },
+    });
   });
 
   it("throws when no agents are provided", async () => {

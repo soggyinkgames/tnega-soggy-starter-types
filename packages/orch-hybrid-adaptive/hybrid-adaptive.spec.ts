@@ -1,7 +1,7 @@
 // orchestrations/hybridAdaptive/index.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { HybridAdaptiveOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("HybridAdaptiveOrch", () => {
   it("chooses concurrent mode when task.strategy is 'concurrent'", async () => {
@@ -158,6 +158,42 @@ describe("HybridAdaptiveOrch", () => {
     expect(res.history?.length).toBe(2);
     expect(agentA.run).toHaveBeenCalledTimes(1);
     expect(agentB.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("executes tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const agent: Agent = {
+      id: "hybrid-tool-agent",
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("search", { query: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await HybridAdaptiveOrch.run("task", [agent], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "search",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "hybrid-tool-agent",
+        orchestrationId: "orch-hybrid-adaptive",
+        mode: "hybrid-default",
+        history: [],
+      }),
+    );
+    expect(res.result).toEqual({
+      query: "runtime bridge",
+      executedByRuntimeContext: true,
+    });
   });
 
   it("throws when no agents are provided", async () => {

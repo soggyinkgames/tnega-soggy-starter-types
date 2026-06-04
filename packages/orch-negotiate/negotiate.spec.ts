@@ -1,7 +1,7 @@
 // orchestrations/negotiate/index.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { NegotiateOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("NegotiateOrch", () => {
   it("picks the highest scoring agent based on proposal score and cost", async () => {
@@ -106,6 +106,45 @@ describe("NegotiateOrch", () => {
     const h = res.history?.[0];
     expect(h?.agentId).toBe("high");
     expect(h?.error).toContain("run-fail");
+  });
+
+  it("executes winner tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const agent: any = {
+      id: "winner-tool-agent",
+      cost: 0.1,
+      propose: vi.fn(async () => ({ score: 0.9 })),
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("search", { query: "runtime bridge" });
+      }),
+    };
+
+    const res = await NegotiateOrch.run("task", [agent as Agent], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "search",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "winner-tool-agent",
+        orchestrationId: "orch-negotiate",
+        mode: "negotiate",
+        ranking: expect.any(Array),
+        history: [],
+      }),
+    );
+    expect(res.result).toEqual({
+      query: "runtime bridge",
+      executedByRuntimeContext: true,
+    });
   });
 
   it("throws when no agents are provided", async () => {

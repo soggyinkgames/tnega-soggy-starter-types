@@ -1,5 +1,5 @@
 // orchestrations/hybridAdaptive/index.ts
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -8,12 +8,12 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
   name = "Hybrid Adaptive Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new HybridAdaptiveOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  private async runConcurrent(task: any, agents: Agent[]) {
+  private async runConcurrent(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const history: HistoryEntry[] = [];
 
     await Promise.all(
@@ -27,7 +27,20 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
         try {
           const output = await agent.run(task, {
             mode: "hybrid-concurrent",
-            runOrchFramework
+            runOrchFramework,
+            executeTool: (toolId: string, input: Record<string, unknown>) => {
+              if (!runtimeContext?.executeTool) {
+                throw new Error("Hybrid adaptive tooling requires runtimeContext.executeTool().");
+              }
+
+              return runtimeContext.executeTool(toolId, input, {
+                agentId: agent.id,
+                orchestrationId: this.id,
+                mode: "hybrid-concurrent",
+                history,
+              });
+            },
+            requestCapability: runtimeContext?.requestCapability,
           });
           entry.output = output;
         } catch (err) {
@@ -49,7 +62,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
     return { result, history };
   }
 
-  private async runSequential(task: any, agents: Agent[]) {
+  private async runSequential(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const history: HistoryEntry[] = [];
     let current = task;
     const steps: { agentId: string; output: any }[] = [];
@@ -66,7 +79,21 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
         const output = await agent.run(current, {
           mode: "hybrid-sequential",
           step: i,
-          runOrchFramework
+          runOrchFramework,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Hybrid adaptive tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: agent.id,
+              orchestrationId: this.id,
+              mode: "hybrid-sequential",
+              step: i,
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         current = output;
         entry.output = output;
@@ -81,7 +108,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
     return { result: current, steps, history };
   }
 
-  private async runNegotiate(task: any, agents: Agent[]) {
+  private async runNegotiate(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const history: HistoryEntry[] = [];
 
     const scored = await Promise.all(
@@ -131,7 +158,20 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
             agentId: s.agent.id,
             score: s.score
           })),
-          runOrchFramework
+          runOrchFramework,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Hybrid adaptive tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: winner.id,
+              orchestrationId: this.id,
+              mode: "hybrid-negotiate",
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         entry.output = result;
       } catch (err) {
@@ -152,7 +192,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
     };
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("HybridAdaptiveOrch requires at least one agent");
     }
@@ -164,7 +204,7 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
 
     // 1) Prefer explicit user / task preference
     if (pref === "concurrent" || agents.length >= 3) {
-      const { result, history } = await this.runConcurrent(task, agents);
+      const { result, history } = await this.runConcurrent(task, agents, runtimeContext);
       return {
         id: this.id,
         strategy: "hybrid-concurrent",
@@ -177,7 +217,8 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
     if (pref === "negotiate") {
       const { winner, ranking, result, history } = await this.runNegotiate(
         task,
-        agents
+        agents,
+        runtimeContext
       );
       return {
         id: this.id,
@@ -193,7 +234,8 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
     if (pref === "sequential") {
       const { result, steps, history } = await this.runSequential(
         task,
-        agents
+        agents,
+        runtimeContext
       );
       return {
         id: this.id,
@@ -219,7 +261,20 @@ export class HybridAdaptiveOrch implements OrchestrationPattern {
       try {
         const output = await agent.run(current, {
           mode: "hybrid-default",
-          runOrchFramework
+          runOrchFramework,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Hybrid adaptive tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: agent.id,
+              orchestrationId: this.id,
+              mode: "hybrid-default",
+              history,
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         current = output;
         entry.output = output;
