@@ -1,7 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 
 import { SequentialOrch, runOrchFramework } from "./index.js";
-import type { Agent } from "../types.js";
+import type { Agent, RuntimeContext } from "../types.js";
+import { executeTool } from "../../src/tools/runtime.js";
+
+const localRuntimeContext: RuntimeContext = {
+  executeTool: async (toolId, input, context) => executeTool(toolId, input, context),
+  requestCapability: async (request) => ({
+    status: "unimplemented",
+    request,
+  }),
+};
 
 describe("SequentialOrch", () => {
   it("runs agents in order, passing output of each as input to the next", async () => {
@@ -167,6 +176,7 @@ describe("SequentialOrch", () => {
         format: "poster",
       },
       [creativeAgent],
+      localRuntimeContext,
     );
 
     expect(result.result.kind).toBe("creative-generation");
@@ -182,6 +192,71 @@ describe("SequentialOrch", () => {
       "assemble.output-payload",
     ]);
     expect(result.result.artifact.summary).toContain("Line art output");
+  });
+
+  it("executes selected tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const creativeAgent: Agent = {
+      id: "creative-agent",
+      config: {
+        id: "creative-agent",
+        agentType: "creative-generation",
+        defaultOrchestration: "sequential",
+        goalProfile: "line-art",
+        inputKinds: ["prompt-text", "image-photo", "reference-set"],
+        outputTargets: ["line-art"],
+      },
+      requiredTools: [
+        "ingest.source-materials",
+        "normalize.references",
+        "derive.line-art-spec",
+        "assemble.output-payload",
+      ],
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("ingest.source-materials", { value: "from-agent" });
+      }),
+    } as any;
+
+    const result = await SequentialOrch.run(
+      { prompt: "Poster" },
+      [creativeAgent],
+      runtimeContext,
+    );
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "ingest.source-materials",
+      { value: "from-agent" },
+      expect.objectContaining({
+        agentId: "creative-agent",
+        orchestrationId: "orch-sequential",
+        step: 0,
+        selectedToolCollections: [
+          "source-material-preparation",
+          "creative-transforms",
+          "artifact-assembly",
+        ],
+        selectedToolIds: [
+          "ingest.source-materials",
+          "normalize.references",
+          "derive.line-art-spec",
+          "assemble.output-payload",
+        ],
+        history: [],
+      }),
+    );
+    expect(result.result).toEqual({
+      value: "from-agent",
+      executedByRuntimeContext: true,
+    });
   });
 
   it("records an error when sequential tooling resolves a tool outside the agent declaration", async () => {
@@ -201,7 +276,11 @@ describe("SequentialOrch", () => {
       }),
     } as any;
 
-    const result = await SequentialOrch.run({ prompt: "Poster" }, [creativeAgent]);
+    const result = await SequentialOrch.run(
+      { prompt: "Poster" },
+      [creativeAgent],
+      localRuntimeContext,
+    );
 
     expect(result.history?.[0]?.error).toContain(
       'Sequential tooling selected undeclared tool "normalize.references" for agent "creative-agent".',
@@ -231,7 +310,11 @@ describe("SequentialOrch", () => {
       }),
     } as any;
 
-    const result = await SequentialOrch.run({ prompt: "Poster" }, [creativeAgent]);
+    const result = await SequentialOrch.run(
+      { prompt: "Poster" },
+      [creativeAgent],
+      localRuntimeContext,
+    );
 
     expect(result.history?.[0]?.error).toContain(
       'Sequential tooling denied unselected tool "search" for agent "creative-agent".',

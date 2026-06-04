@@ -1,8 +1,7 @@
 // orchestrations/sequential/index.ts
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
-import { executeTool as executeLocalTool } from "../../src/tools/runtime";
 import { resolveSequentialAgentToolRuntime } from "./tools";
 
 export class SequentialOrch implements OrchestrationPattern {
@@ -10,12 +9,12 @@ export class SequentialOrch implements OrchestrationPattern {
   name = "Sequential Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new SequentialOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("SequentialOrch requires at least one agent");
     }
@@ -54,16 +53,20 @@ export class SequentialOrch implements OrchestrationPattern {
           selectedToolCollections,
           selectedToolIds,
           declaredRequiredTools,
-          // Keep this executeTool(toolId, state) contract stable: today it calls
-          // local tools, later it can call a tools API without changing generated agents.
-          executeTool: (toolId: string, spec: any) => {
+          // Keep this executeTool(toolId, state) contract stable so the
+          // runtime can move from local tools to an API without changing agents.
+          executeTool: (toolId: string, spec: Record<string, unknown>) => {
             if (!selectedToolIds.includes(toolId)) {
               throw new Error(
                 `Sequential tooling denied unselected tool "${toolId}" for agent "${agent.id}".`,
               );
             }
 
-            return executeLocalTool(toolId, spec, {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Sequential tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, spec, {
               agentId: agent.id,
               orchestrationId: this.id,
               step: i,
@@ -72,6 +75,7 @@ export class SequentialOrch implements OrchestrationPattern {
               history,
             });
           },
+          requestCapability: runtimeContext?.requestCapability,
         });
 
         entry.output = output;

@@ -6,6 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { SequentialOrch } from "../../packages/orch-sequential/index.js";
+import { createLocalRuntimeContext } from "../run-agent-runtime.js";
 
 describe("new-agent integration", () => {
     let tempRoot: string;
@@ -335,7 +336,7 @@ export default {
         expect(configText).toContain(`id: "my-agent"`);
         expect(configText).toContain(`primary_goal: "answer-from-knowledge"`);
         expect(configText).toContain(`agent_type: "knowledge-insight"`);
-        expect(configText).toContain(`default_orch: "orch-sequential"`);
+        expect(configText).toContain(`default_orch: "orch-centralised"`);
         expect(configText).toContain(`framework: "langgraph"`);
         expect(configText).toContain(`capabilities`);
         expect(configText).toContain(`"enabled": [`);
@@ -343,11 +344,11 @@ export default {
         expect(configText).toContain(`"availableOnRequest": []`);
         expect(configText).toContain(`"disallowed": []`);
         expect(configText).toContain(`provider: "supabase"`);
-        expect(configText).toContain(`"retrieve-and-summarize"`);
+        expect(configText).toContain(`"central-answer"`);
 
         expect(toolsText).toContain(`"query_knowledge_base"`);
-        expect(toolsText).toContain(`"summarize_context"`);
-        expect(toolsText).toContain(`"trace_steps"`);
+        expect(toolsText).not.toContain(`"summarize_context"`);
+        expect(toolsText).not.toContain(`"trace_steps"`);
         expect(toolsText).not.toContain(`toolingStatus`);
 
         expect(evalsText).toContain(`run_basic`);
@@ -358,7 +359,7 @@ export default {
 
         expect(notesText).toContain(`Primary goal: answer-from-knowledge`);
         expect(notesText).toContain(`Agent type: knowledge-insight`);
-        expect(notesText).toContain(`Orchestration: orch-sequential`);
+        expect(notesText).toContain(`Orchestration: orch-centralised`);
     });
 
     it("supports flag-prefill plus guided adapt for later steps", async () => {
@@ -600,9 +601,12 @@ export default {
         expect(configModule.default.toolCollections).toBeUndefined();
 
         const toolsText = await readFile("agents/creative-agent/tools.ts");
+        const indexText = await readFile("agents/creative-agent/index.ts");
         expect(toolsText).toContain(`"ingest.source-materials"`);
         expect(toolsText).toContain(`"derive.line-art-spec"`);
         expect(toolsText).not.toContain(`toolingStatus`);
+        expect(indexText).not.toContain("src/tools");
+        expect(indexText).not.toContain("@tools");
 
         const result = await SequentialOrch.run(
             {
@@ -616,6 +620,7 @@ export default {
                 constraints: ["single focal character"],
             },
             [agent as any],
+            createLocalRuntimeContext(),
         );
 
         expect(result.result.kind).toBe("creative-generation");
