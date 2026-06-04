@@ -3,14 +3,16 @@ import fs from "fs-extra";
 import { pathToFileURL } from "url";
 
 import { OrchestrationRegistry } from "../packages/registry";
-import type { Agent, OrchestrationResult } from "../packages/types";
+import type { Agent, OrchestrationResult, RuntimeContext } from "../packages/types";
+import { executeTool as executeLocalTool } from "../src/tools/runtime.js";
 import { assertAgentConfigCapabilities } from "./helpers/agentCapabilities.js";
 
 export type RunAgentCommandOptions = {
   agentName: string;
   query: string;
   agentsRoot?: string;
-  orchestrationRegistry?: Record<string, { run: (task: any, agents: Agent[]) => Promise<OrchestrationResult> }>;
+  orchestrationRegistry?: Record<string, { run: (task: any, agents: Agent[], runtimeContext?: RuntimeContext) => Promise<OrchestrationResult> }>;
+  runtimeContext?: RuntimeContext;
 };
 
 export type RunAgentCommandResult = {
@@ -60,11 +62,22 @@ export function formatOutputForDisplay(output: any): string | null {
   return JSON.stringify(output, null, 2);
 }
 
+export function createLocalRuntimeContext(): RuntimeContext {
+  return {
+    executeTool: async (toolId, input, context) => executeLocalTool(toolId, input, context),
+    requestCapability: async (request) => ({
+      status: "unimplemented",
+      request,
+    }),
+  };
+}
+
 export async function runAgentCommand(
   options: RunAgentCommandOptions,
 ): Promise<RunAgentCommandResult> {
   const agentsRoot = options.agentsRoot ?? path.resolve("agents");
   const registry = options.orchestrationRegistry ?? OrchestrationRegistry;
+  const runtimeContext = options.runtimeContext ?? createLocalRuntimeContext();
   const baseDir = path.resolve(agentsRoot, options.agentName);
   const agentPath = path.join(baseDir, "index.ts");
   const configPath = path.join(baseDir, "config.ts");
@@ -97,14 +110,18 @@ export async function runAgentCommand(
       throw new Error(`No orchestration runner is registered for "${orchestrationId}".`);
     }
 
-    const orchestrationResult = await OrchestrationRunner.run(options.query, [
-      {
-        id: config.id ?? options.agentName,
-        config,
-        requiredTools,
-        run: runAgent,
-      },
-    ]);
+    const orchestrationResult = await OrchestrationRunner.run(
+      options.query,
+      [
+        {
+          id: config.id ?? options.agentName,
+          config,
+          requiredTools,
+          run: runAgent,
+        },
+      ],
+      runtimeContext,
+    );
 
     const failedEntry = orchestrationResult?.history?.find((entry) => entry.error);
     if (failedEntry?.error) {
@@ -115,7 +132,7 @@ export async function runAgentCommand(
 
     output = orchestrationResult?.result;
   } else {
-    output = await runAgent(options.query);
+    output = await runAgent(options.query, runtimeContext);
   }
 
   return {

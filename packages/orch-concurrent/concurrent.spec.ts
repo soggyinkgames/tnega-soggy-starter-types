@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ConcurrentOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("ConcurrentOrch", () => {
   it("runs all agents concurrently with per-index inputs and context", async () => {
@@ -90,6 +90,48 @@ describe("ConcurrentOrch", () => {
     // And: both agents were invoked exactly once
     expect(failingAgent.run).toHaveBeenCalledTimes(1);
     expect(okAgent.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("executes tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const agent: Agent = {
+      id: "tool-agent",
+      run: vi.fn(async (_input: any, ctx?: any) => {
+        return ctx.executeTool("search", { query: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await ConcurrentOrch.run("task", [agent], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "search",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "tool-agent",
+        orchestrationId: "orch-concurrent",
+        mode: "concurrent",
+        index: 0,
+      }),
+    );
+    expect(res.result).toEqual([
+      {
+        agentId: "tool-agent",
+        input: "task",
+        output: {
+          query: "runtime bridge",
+          executedByRuntimeContext: true,
+        },
+      },
+    ]);
   });
 
   it("throws when no agents are provided", async () => {

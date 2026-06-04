@@ -1,5 +1,5 @@
 // orchestrations/negotiate/index.ts
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -8,9 +8,9 @@ export class NegotiateOrch implements OrchestrationPattern {
   name = "Negotiation Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new NegotiateOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
   private async score(agent: Agent, task: any): Promise<number> {
@@ -39,7 +39,7 @@ export class NegotiateOrch implements OrchestrationPattern {
     return (baseScore + costAdj) / 2;
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("NegotiateOrch requires at least one agent");
     }
@@ -78,7 +78,21 @@ export class NegotiateOrch implements OrchestrationPattern {
           mode: "negotiate",
           winner: winner.id,
           ranking,
-          runOrchFramework
+          runOrchFramework,
+          executeTool: (toolId: string, input: Record<string, unknown>) => {
+            if (!runtimeContext?.executeTool) {
+              throw new Error("Negotiate tooling requires runtimeContext.executeTool().");
+            }
+
+            return runtimeContext.executeTool(toolId, input, {
+              agentId: winner.id,
+              orchestrationId: this.id,
+              mode: "negotiate",
+              ranking,
+              history: [...history],
+            });
+          },
+          requestCapability: runtimeContext?.requestCapability,
         });
         entry.output = result;
       } catch (err) {

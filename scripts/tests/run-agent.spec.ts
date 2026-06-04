@@ -104,7 +104,36 @@ describe("runAgentCommand", () => {
 
     expect(result.orchestrationId).toBe("orch-sequential");
     expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.calls[0]?.[2]).toEqual(
+      expect.objectContaining({
+        executeTool: expect.any(Function),
+        requestCapability: expect.any(Function),
+      }),
+    );
     expect(result.displayOutput).toBe("Sequential:hello world");
+  });
+
+  it("lets orchestration execute local tools through runtimeContext", async () => {
+    const run = vi.fn(async (_task, _agents, runtimeContext) => ({
+      id: "orch-sequential",
+      result: await runtimeContext.executeTool("search", { query: "hello world" }),
+    }));
+
+    const result = await runAgentCommand({
+      agentName: ORCH_AGENT_NAME,
+      query: "hello world",
+      agentsRoot,
+      orchestrationRegistry: {
+        "orch-sequential": { run },
+      },
+    });
+
+    expect(result.orchestrationId).toBe("orch-sequential");
+    expect(result.output).toEqual(
+      expect.objectContaining({
+        hits: expect.any(Array),
+      }),
+    );
   });
 
   it("passes requiredTools from tools.ts into orchestration", async () => {
@@ -122,16 +151,23 @@ describe("runAgentCommand", () => {
       },
     });
 
-    expect(run).toHaveBeenCalledWith("hello world", [
-      expect.objectContaining({
-        id: ORCH_AGENT_NAME,
-        requiredTools: ["search", "summarize"],
-        config: expect.objectContaining({
-          defaultOrchestration: "sequential",
+    expect(run).toHaveBeenCalledWith(
+      "hello world",
+      [
+        expect.objectContaining({
+          id: ORCH_AGENT_NAME,
+          requiredTools: ["search", "summarize"],
+          config: expect.objectContaining({
+            defaultOrchestration: "sequential",
+          }),
+          run: expect.any(Function),
         }),
-        run: expect.any(Function),
+      ],
+      expect.objectContaining({
+        executeTool: expect.any(Function),
+        requestCapability: expect.any(Function),
       }),
-    ]);
+    );
   });
 
   it("fails clearly when an orchestration runner is not registered", async () => {

@@ -18,8 +18,31 @@ export interface OrchestrationPattern {
   id: string;
   name: string;
   description: string;
-  run(task: any, agents: Agent[]): Promise<OrchestrationResult>;
+  run(task: any, agents: Agent[], runtimeContext?: RuntimeContext): Promise<OrchestrationResult>;
 }
+
+export type RuntimeCapabilityRequestInput = {
+  capability: string;
+  reason?: string;
+  agentId?: string;
+  [key: string]: any;
+};
+
+export type RuntimeCapabilityRequestResult = {
+  status: "unimplemented";
+  request: RuntimeCapabilityRequestInput;
+};
+
+export type RuntimeContext = {
+  executeTool: (
+    toolId: string,
+    input: Record<string, unknown>,
+    context?: Record<string, unknown>,
+  ) => Promise<any>;
+  requestCapability: (
+    request: RuntimeCapabilityRequestInput,
+  ) => Promise<RuntimeCapabilityRequestResult>;
+};
 
 export interface Agent {
   id: string;

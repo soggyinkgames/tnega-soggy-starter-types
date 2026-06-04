@@ -1,4 +1,4 @@
-import { Agent, OrchestrationPattern, HistoryEntry } from "../types";
+import { Agent, OrchestrationPattern, HistoryEntry, RuntimeContext } from "../types";
 import config from "./config";
 import { runOrchFramework } from "../runOrchFramework";
 
@@ -7,12 +7,12 @@ export class ConcurrentOrch implements OrchestrationPattern {
   name = "Concurrent Orchestration";
   description = config.description;
 
-  static async run(task: any, agents: Agent[]) {
+  static async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     const orch = new ConcurrentOrch();
-    return orch.run(task, agents);
+    return orch.run(task, agents, runtimeContext);
   }
 
-  async run(task: any, agents: Agent[]) {
+  async run(task: any, agents: Agent[], runtimeContext?: RuntimeContext) {
     if (!agents || agents.length === 0) {
       throw new Error("ConcurrentOrch requires at least one agent");
     }
@@ -34,7 +34,20 @@ export class ConcurrentOrch implements OrchestrationPattern {
           const output = await agent.run(input, {
             mode: "concurrent",
             index,
-            runOrchFramework
+            runOrchFramework,
+            executeTool: (toolId: string, toolInput: Record<string, unknown>) => {
+              if (!runtimeContext?.executeTool) {
+                throw new Error("Concurrent tooling requires runtimeContext.executeTool().");
+              }
+
+              return runtimeContext.executeTool(toolId, toolInput, {
+                agentId: agent.id,
+                orchestrationId: this.id,
+                mode: "concurrent",
+                index,
+              });
+            },
+            requestCapability: runtimeContext?.requestCapability,
           });
           entry.output = output;
         } catch (err) {

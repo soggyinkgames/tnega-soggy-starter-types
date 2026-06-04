@@ -1,7 +1,7 @@
 // orchestrations/sharedMemory/index.test.ts
 import { describe, it, expect, vi } from "vitest";
 import { SharedMemoryOrch, runOrchFramework } from ".";
-import type { Agent } from "../types";
+import type { Agent, RuntimeContext } from "../types";
 
 describe("SharedMemoryOrch", () => {
   it("runs agents with a shared blackboard that accumulates contributions", async () => {
@@ -114,6 +114,43 @@ describe("SharedMemoryOrch", () => {
 
     expect(failingAgent.run).toHaveBeenCalledTimes(1);
     expect(okAgent.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("executes tools through the injected runtime context", async () => {
+    const runtimeContext: RuntimeContext = {
+      executeTool: vi.fn(async (_toolId, input) => ({
+        ...input,
+        executedByRuntimeContext: true,
+      })),
+      requestCapability: async (request) => ({
+        status: "unimplemented",
+        request,
+      }),
+    };
+    const agent: Agent = {
+      id: "shared-tool-agent",
+      run: vi.fn(async (_blackboard: any, ctx?: any) => {
+        return ctx.executeTool("search", { query: "runtime bridge" });
+      }),
+    } as any;
+
+    const res = await SharedMemoryOrch.run("task", [agent], runtimeContext);
+
+    expect(runtimeContext.executeTool).toHaveBeenCalledWith(
+      "search",
+      { query: "runtime bridge" },
+      expect.objectContaining({
+        agentId: "shared-tool-agent",
+        orchestrationId: "orch-shared-memory",
+        mode: "shared-memory",
+        index: 0,
+        history: [],
+      }),
+    );
+    expect(res.blackboard["shared-tool-agent"]).toEqual({
+      query: "runtime bridge",
+      executedByRuntimeContext: true,
+    });
   });
 
   it("throws when no agents are provided", async () => {
