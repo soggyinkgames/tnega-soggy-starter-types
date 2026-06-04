@@ -13,6 +13,7 @@ export type TemplateVariableInput = {
   tools: string[];
   evals: string[];
   memoryProvider: string;
+  capabilities: Record<string, boolean>;
   inputKinds: string[];
   outputTargets: string[];
 };
@@ -38,6 +39,7 @@ export function buildTemplateVariables(
     "__TOOLS_LIST__": params.tools.join(", ") || "(none)",
     "__EVALS_JSON__": JSON.stringify(params.evals),
     "__EVALS_LIST__": params.evals.join(", ") || "(none)",
+    "__CAPABILITIES_JSON__": JSON.stringify(params.capabilities),
     "__MEMORY_PROVIDER__": params.memoryProvider,
     "__INPUT_KINDS_JSON__": JSON.stringify(params.inputKinds),
     "__OUTPUT_TARGETS_JSON__": JSON.stringify(params.outputTargets),

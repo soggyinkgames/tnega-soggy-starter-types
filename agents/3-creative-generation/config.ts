@@ -1,12 +1,17 @@
-// agents/3-creative-generation/config.ts
 export default {
     id: "3-creative-generation",
-    title: "Creative Generation Agent",
-    orchestration: "orch-group-collaborative", // crewai | langchain | langgraph
-    memory: { shortTerm: "redis", longTerm: "supabase" },
-    vectorStore: "pgvector",
-    llm: "openai:gpt-4-turbo",
-    evals: ["modelgraded", "safety"],
+    agentType: "creative-generation" as const,
+    defaultOrchestration: "sequential",
+    goalProfile: "music",
+    inputKinds: JSON.parse('["prompt-text","audio","reference-set"]') as string[],
+    outputTargets: JSON.parse('["music"]') as string[],
+    evals: JSON.parse('["modelgraded","safety"]') as string[],
+    memory: {
+        provider: "supabase",
+    },
+    framework: "langchain",
+    capabilities: { chat: true },
     deploy: "vercel",
     ci: "github",
+    llm: "openai:gpt-4-turbo",
 };

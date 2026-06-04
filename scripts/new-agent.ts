@@ -39,7 +39,8 @@ import { DEFAULT_EVALS } from "lib/defaultEvals";
 import {
     buildTemplateVariables,
     renderTemplateContent,
-} from "./helpers/templateRendering";
+} from "./helpers/templateRendering.js";
+import { GENERATED_AGENT_CAPABILITIES } from "./helpers/agentCapabilities.js";
 
 /**
  * ============================================================================
@@ -86,6 +87,7 @@ type ExistingAgentConfig = {
     id?: string;
     agent_type?: string;
     agentType?: string;
+    capabilities?: Record<string, boolean>;
     default_orch?: string;
     defaultOrchestration?: string;
     framework?: string;
@@ -1260,6 +1262,7 @@ export default {
     outcomes: ${params.selectedGoal ? JSON.stringify(params.selectedGoal.outcomes ?? [], null, 4) : "[]"},
     tools_needed: ${JSON.stringify(params.tools, null, 4)},
     evals: ${JSON.stringify(params.finalEvals, null, 4)},
+    capabilities: ${JSON.stringify(GENERATED_AGENT_CAPABILITIES, null, 4)},
     memory: {
         provider: "${params.memoryProvider}",
         status: "planned"
@@ -1379,6 +1382,7 @@ async function buildAgentFiles(
             outcomes: resolved.goalVariation?.outcomes ?? [],
             tools: resolved.tools,
             evals: resolved.evals,
+            capabilities: GENERATED_AGENT_CAPABILITIES,
             memoryProvider: resolved.memoryProvider,
             inputKinds: renderData.inputKinds,
             outputTargets: renderData.outputTargets,

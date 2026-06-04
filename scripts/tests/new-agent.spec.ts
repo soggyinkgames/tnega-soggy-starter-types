@@ -112,6 +112,42 @@ export async function getRecommendedTools(goalName, runtime, config) {
         );
 
         await writeFile(
+            "packages/orch-centralised/config.ts",
+            `
+export default {
+    id: "orch-centralised",
+    description: "Centralised orchestration.",
+    supported_framework: ["langgraph", "custom-runtime"],
+    default_framework: "langgraph",
+    compatible_agent_types: ["knowledge-insight", "strategy"],
+    recommended_for: {
+        "knowledge-insight": true
+    },
+    memory: {
+        default: "supabase",
+        supported: ["supabase", "none"]
+    },
+    evals_default: ["basic", "system"]
+};
+`
+        );
+
+        await writeFile(
+            "packages/orch-centralised/goals.ts",
+            `
+export const goals = [
+    {
+        name: "central-answer",
+        description: "Answer from a central controller.",
+        outcomes: ["answer"],
+        examples: ["Central answer"],
+        recommendedTools: ["query_knowledge_base"]
+    }
+];
+`
+        );
+
+        await writeFile(
             "packages/orch-hierarchical/config.ts",
             `
 export default {
@@ -301,6 +337,8 @@ export default {
         expect(configText).toContain(`agent_type: "knowledge-insight"`);
         expect(configText).toContain(`default_orch: "orch-sequential"`);
         expect(configText).toContain(`framework: "langgraph"`);
+        expect(configText).toContain(`capabilities`);
+        expect(configText).toContain(`"chat": true`);
         expect(configText).toContain(`provider: "supabase"`);
         expect(configText).toContain(`"retrieve-and-summarize"`);
 
@@ -354,6 +392,7 @@ export default {
 
         expect(configText).toContain(`id: "prefilled-agent"`);
         expect(configText).toContain(`"answer-with-citations"`);
+        expect(configText).toContain(`"chat": true`);
         expect(configText).toContain(`framework: "custom-runtime"`);
         expect(configText).toContain(`provider: "redis"`);
 
@@ -405,6 +444,48 @@ export default {
         await expect(run()).rejects.toThrow(
             `Orchestration "orch-hierarchical" is not compatible with agent type "knowledge-insight".`
         );
+    });
+
+    it("scaffolds centralised orchestration agents with chat capability", async () => {
+        process.argv = [
+            "node",
+            "new-agent.ts",
+            "--name", "central-chat-agent",
+            "--primary-goal", "answer-from-knowledge",
+            "--type", "knowledge-insight",
+            "--orch", "orch-centralised",
+            "--yes",
+        ];
+
+        questionAnswers = [];
+
+        const run = await getRun();
+        await run();
+
+        const configText = await readFile("agents/central-chat-agent/config.ts");
+        expect(configText).toContain(`default_orch: "orch-centralised"`);
+        expect(configText).toContain(`"chat": true`);
+    });
+
+    it("scaffolds hierarchical orchestration agents with chat capability", async () => {
+        process.argv = [
+            "node",
+            "new-agent.ts",
+            "--name", "hierarchy-chat-agent",
+            "--primary-goal", "generate-content",
+            "--type", "strategy",
+            "--orch", "orch-hierarchical",
+            "--yes",
+        ];
+
+        questionAnswers = [];
+
+        const run = await getRun();
+        await run();
+
+        const configText = await readFile("agents/hierarchy-chat-agent/config.ts");
+        expect(configText).toContain(`default_orch: "orch-hierarchical"`);
+        expect(configText).toContain(`"chat": true`);
     });
 
     it("prefers existing agent config evals over template/orchestration defaults when rerunning", async () => {
@@ -497,6 +578,7 @@ export default {
             outputTargets: ["line-art"],
             framework: "langgraph",
             evals: ["modelgraded", "safety"],
+            capabilities: { chat: true },
         });
         expect(configModule.default.memory).toEqual({ provider: "supabase" });
         expect(configModule.default.toolCollections).toBeUndefined();

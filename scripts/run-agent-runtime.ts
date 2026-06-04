@@ -4,6 +4,7 @@ import { pathToFileURL } from "url";
 
 import { OrchestrationRegistry } from "../packages/registry";
 import type { Agent, OrchestrationResult } from "../packages/types";
+import { assertAgentConfigHasChatCapability } from "./helpers/agentCapabilities.js";
 
 export type RunAgentCommandOptions = {
   agentName: string;
@@ -80,6 +81,7 @@ export async function runAgentCommand(
 
   const runAgent = agentMod.runAgent || agentMod.default;
   const config = configMod.default ?? {};
+  assertAgentConfigHasChatCapability(config);
   const requiredTools = Array.isArray(toolsMod.requiredTools)
     ? toolsMod.requiredTools
     : [];
