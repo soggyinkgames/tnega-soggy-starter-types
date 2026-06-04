@@ -14,6 +14,8 @@
     "test:tools": "vitest run tests/tools tools",
     "test:scripts": "vitest run scripts/tests",
     "test:orch": "vitest run packages/orch-",
+    "test:templates": "vitest run templates/agent-types",
+    "test:agents": "vitest run agents",
     "ui:dev": "cd ui/astro && npm run dev",
     "ui:build": "cd ui/astro && npm run build",
     "ui:preview": "cd ui/astro && npm run preview"

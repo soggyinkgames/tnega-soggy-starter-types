@@ -20,6 +20,12 @@ const creativeTemplateReplacements: Record<string, string> = {
     "__GOAL_PROFILE__": "staged-transformation",
     "__INPUT_KINDS_JSON__": JSON.stringify(["prompt-text", "image-photo", "reference-set"]),
     "__OUTPUT_TARGETS_JSON__": JSON.stringify(["line-art"]),
+    "__TOOLS_JSON__": JSON.stringify([
+        "ingest.source-materials",
+        "normalize.references",
+        "derive.line-art-spec",
+        "assemble.output-payload",
+    ]),
     "__EVALS_JSON__": JSON.stringify(["modelgraded", "safety"]),
     "__CAPABILITIES_JSON__": JSON.stringify({ chat: true }),
     "__MEMORY_PROVIDER__": "redis",
@@ -65,6 +71,13 @@ async function renderCreativeTemplateFixture() {
 }
 
 describe("creative-generation template", () => {
+    it("enables chat capability", async () => {
+        const { config, tempRoot } = await renderCreativeTemplateFixture();
+
+        expect(config.capabilities).toEqual({ chat: true });
+        await fs.rm(tempRoot, { recursive: true, force: true });
+    });
+
     it("normalizes multimodal inputs without forcing a prompt-only brief", async () => {
         const { normalizeCreativeGenerationInput, tempRoot } = await renderCreativeTemplateFixture();
         const normalized = normalizeCreativeGenerationInput({
@@ -90,8 +103,25 @@ describe("creative-generation template", () => {
             defaultOrchestration: "sequential",
             inputKinds: ["prompt-text", "image-photo", "reference-set"],
             outputTargets: ["line-art"],
+            capabilities: { chat: true },
             framework: "langgraph",
         });
+        await fs.rm(tempRoot, { recursive: true, force: true });
+    });
+
+    it("rejects config without chat capability", async () => {
+        const {
+            assertCreativeGenerationConfig,
+            config,
+            tempRoot,
+        } = await renderCreativeTemplateFixture();
+
+        expect(() =>
+            assertCreativeGenerationConfig({
+                ...config,
+                capabilities: {},
+            })
+        ).toThrow("CreativeGenerationConfig.capabilities.chat must be enabled.");
         await fs.rm(tempRoot, { recursive: true, force: true });
     });
 
