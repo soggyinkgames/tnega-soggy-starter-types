@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { exec } from "node:child_process";
 
-import { runAgentCommand, runAgentEvals } from "../run-agent-runtime.js";
+import { runAgentChatSession, runAgentCommand, runAgentEvals } from "../run-agent-runtime.js";
 
 const AGENT_NAME = "__test-agent";
 const ORCH_AGENT_NAME = "__test-sequential-agent";
@@ -32,8 +32,14 @@ beforeAll(async () => {
   const orchAgentDir = path.join(agentsRoot, ORCH_AGENT_NAME);
   await fs.ensureDir(orchAgentDir);
   const orchIndexTs = `
-export async function runAgent(query: string){
-  return { output: \`Sequential:\${query}\`, mode: "sequential" };
+export async function runAgent(query: any, context?: any){
+  const text = typeof query === "string" ? query : query.message ?? query.query;
+  return {
+    output: \`Sequential:\${text}\`,
+    mode: "sequential",
+    historySeen: Array.isArray(query?.history) ? query.history : [],
+    contextHistory: Array.isArray(context?.conversationHistory) ? context.conversationHistory : [],
+  };
 }
 `;
   await fs.writeFile(path.join(orchAgentDir, "index.ts"), orchIndexTs, "utf8");
@@ -70,6 +76,12 @@ async function runWithTsx(args: string[]): Promise<{ stdout: string; code: numbe
       resolve({ stdout: stdout + (stderr ? `\n[stderr]\n${stderr}` : ""), code });
     });
   });
+}
+
+async function* chatMessages(messages: string[]) {
+  for (const message of messages) {
+    yield message;
+  }
 }
 
 describe("runAgentCommand", () => {
@@ -229,6 +241,124 @@ describe("runAgentCommand", () => {
     ).rejects.toThrow(
       `Agent "${ORCH_AGENT_NAME}" failed during orch-sequential: Error: tool failed`,
     );
+  });
+
+  it("runs chat messages through orchestration with conversation history", async () => {
+    const responses: string[] = [];
+    const run = vi.fn(async (task, agents) => ({
+      id: "orch-sequential",
+      result: await agents[0].run(task, { mode: "sequential" }),
+    }));
+
+    const result = await runAgentChatSession({
+      agentName: ORCH_AGENT_NAME,
+      agentsRoot,
+      messages: chatMessages(["hello", "again", "/exit"]),
+      orchestrationRegistry: {
+        "orch-sequential": { run },
+      },
+      onResponse: async (response) => {
+        responses.push(response);
+      },
+    });
+
+    expect(result.config).toEqual(
+      expect.objectContaining({
+        id: ORCH_AGENT_NAME,
+        capabilities: CAPABILITIES,
+      }),
+    );
+    expect(result.orchestrationId).toBe("orch-sequential");
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(responses).toEqual(["Sequential:hello", "Sequential:again"]);
+
+    expect(run.mock.calls[0]?.[0]).toEqual({
+      mode: "chat",
+      message: "hello",
+      history: [],
+      state: {
+        conversation: [],
+      },
+    });
+    expect(run.mock.calls[0]?.[1]).toEqual([
+      expect.objectContaining({
+        id: ORCH_AGENT_NAME,
+        config: expect.objectContaining({ id: ORCH_AGENT_NAME }),
+        requiredTools: ["search", "summarize"],
+        run: expect.any(Function),
+      }),
+    ]);
+    expect(run.mock.calls[0]?.[2]).toEqual(
+      expect.objectContaining({
+        executeTool: expect.any(Function),
+        requestCapability: expect.any(Function),
+      }),
+    );
+    expect(run.mock.calls[1]?.[0]).toEqual({
+      mode: "chat",
+      message: "again",
+      history: [
+        { role: "user", content: "hello" },
+        {
+          role: "agent",
+          content: "Sequential:hello",
+          output: {
+            output: "Sequential:hello",
+            mode: "sequential",
+            historySeen: [],
+            contextHistory: [],
+          },
+        },
+      ],
+      state: {
+        conversation: [
+          { role: "user", content: "hello" },
+          {
+            role: "agent",
+            content: "Sequential:hello",
+            output: {
+              output: "Sequential:hello",
+              mode: "sequential",
+              historySeen: [],
+              contextHistory: [],
+            },
+          },
+        ],
+      },
+    });
+    expect(result.history[3]?.output).toEqual(
+      expect.objectContaining({
+        output: "Sequential:again",
+        historySeen: result.history.slice(0, 2),
+        contextHistory: result.history.slice(0, 2),
+      }),
+    );
+  });
+
+  it("rejects chat mode when chat is not enabled", async () => {
+    const agentDir = path.join(agentsRoot, "__no-chat-agent");
+    await fs.ensureDir(agentDir);
+    await fs.writeFile(
+      path.join(agentDir, "index.ts"),
+      `export async function runAgent(){ return { output: "ok" }; }`,
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(agentDir, "config.ts"),
+      `export default { id: "__no-chat-agent", evals: [], defaultOrchestration: "sequential", capabilities: { enabled: ["tools"], availableOnRequest: [], disallowed: [] } };`,
+      "utf8",
+    );
+
+    await expect(
+      runAgentChatSession({
+        agentName: "__no-chat-agent",
+        agentsRoot,
+        messages: chatMessages(["hello"]),
+        orchestrationRegistry: {
+          "orch-sequential": { run: vi.fn() },
+        },
+      }),
+    ).rejects.toThrow("Agent config capabilities must define enabled, availableOnRequest, and disallowed string arrays with chat enabled.");
   });
 
   it("runs evals through a mockable eval loader", async () => {

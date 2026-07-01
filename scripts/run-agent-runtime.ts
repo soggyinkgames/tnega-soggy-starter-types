@@ -15,6 +15,39 @@ export type RunAgentCommandOptions = {
   runtimeContext?: RuntimeContext;
 };
 
+export type ChatConversationEntry = {
+  role: "user" | "agent";
+  content: string;
+  output?: any;
+};
+
+export type RunAgentChatSessionOptions = {
+  agentName: string;
+  messages: AsyncIterable<string>;
+  agentsRoot?: string;
+  orchestrationRegistry?: Record<string, { run: (task: any, agents: Agent[], runtimeContext?: RuntimeContext) => Promise<OrchestrationResult> }>;
+  runtimeContext?: RuntimeContext;
+  onResponse?: (response: string, output: any, history: ChatConversationEntry[]) => void | Promise<void>;
+  exitCommands?: string[];
+};
+
+export type RunAgentChatSessionResult = {
+  agentName: string;
+  config: Record<string, any>;
+  requiredTools: string[];
+  orchestrationId: string;
+  history: ChatConversationEntry[];
+};
+
+type ChatTask = {
+  mode: "chat";
+  message: string;
+  history: ChatConversationEntry[];
+  state: {
+    conversation: ChatConversationEntry[];
+  };
+};
+
 export type RunAgentCommandResult = {
   agentName: string;
   query: string;
@@ -72,9 +105,12 @@ export function createLocalRuntimeContext(): RuntimeContext {
   };
 }
 
-export async function runAgentCommand(
-  options: RunAgentCommandOptions,
-): Promise<RunAgentCommandResult> {
+async function loadAgentRuntime(options: {
+  agentName: string;
+  agentsRoot?: string;
+  orchestrationRegistry?: RunAgentCommandOptions["orchestrationRegistry"];
+  runtimeContext?: RuntimeContext;
+}) {
   const agentsRoot = options.agentsRoot ?? path.resolve("agents");
   const registry = options.orchestrationRegistry ?? OrchestrationRegistry;
   const runtimeContext = options.runtimeContext ?? createLocalRuntimeContext();
@@ -102,6 +138,64 @@ export async function runAgentCommand(
     config.defaultOrchestration ?? config.default_orch,
   );
 
+  return {
+    agentsRoot,
+    registry,
+    runtimeContext,
+    agentPath,
+    configPath,
+    evalPath,
+    toolsPath,
+    runAgent,
+    config,
+    requiredTools,
+    orchestrationId,
+  };
+}
+
+function assertChatEnabled(config: Record<string, any>) {
+  const enabled = config.capabilities?.enabled;
+  if (!Array.isArray(enabled) || !enabled.includes("chat")) {
+    throw new Error("Chat mode requires agent config capabilities.enabled to include chat.");
+  }
+}
+
+function assertNoOrchestrationError(
+  orchestrationResult: OrchestrationResult,
+  orchestrationId: string,
+) {
+  const failedEntry = orchestrationResult?.history?.find((entry) => entry.error);
+  if (failedEntry?.error) {
+    throw new Error(
+      `Agent "${failedEntry.agentId}" failed during ${orchestrationId}: ${failedEntry.error}`,
+    );
+  }
+}
+
+function toAgentChatInput(task: ChatTask) {
+  return {
+    message: task.message,
+    query: task.message,
+    prompt: task.message,
+    history: task.history,
+    state: task.state,
+  };
+}
+
+export async function runAgentCommand(
+  options: RunAgentCommandOptions,
+): Promise<RunAgentCommandResult> {
+  const loaded = await loadAgentRuntime(options);
+  const {
+    registry,
+    runtimeContext,
+    evalPath,
+    runAgent,
+    config,
+    requiredTools,
+    orchestrationId,
+  } = loaded;
+
   let output: any;
   if (orchestrationId) {
     const OrchestrationRunner = registry[orchestrationId];
@@ -123,12 +217,7 @@ export async function runAgentCommand(
       runtimeContext,
     );
 
-    const failedEntry = orchestrationResult?.history?.find((entry) => entry.error);
-    if (failedEntry?.error) {
-      throw new Error(
-        `Agent "${failedEntry.agentId}" failed during ${orchestrationId}: ${failedEntry.error}`,
-      );
-    }
+    assertNoOrchestrationError(orchestrationResult, orchestrationId);
 
     output = orchestrationResult?.result;
   } else {
@@ -144,6 +233,90 @@ export async function runAgentCommand(
     output,
     displayOutput: formatOutputForDisplay(output),
     evalPath: fs.existsSync(evalPath) ? evalPath : undefined,
+  };
+}
+
+export async function runAgentChatSession(
+  options: RunAgentChatSessionOptions,
+): Promise<RunAgentChatSessionResult> {
+  const loaded = await loadAgentRuntime(options);
+  const {
+    registry,
+    runtimeContext,
+    runAgent,
+    config,
+    requiredTools,
+    orchestrationId,
+  } = loaded;
+
+  assertChatEnabled(config);
+
+  if (!orchestrationId) {
+    throw new Error("Chat mode requires the agent to declare a default orchestration.");
+  }
+
+  const OrchestrationRunner = registry[orchestrationId];
+  if (!OrchestrationRunner || typeof OrchestrationRunner.run !== "function") {
+    throw new Error(`No orchestration runner is registered for "${orchestrationId}".`);
+  }
+
+  const exitCommands = options.exitCommands ?? ["/exit", "/quit"];
+  const history: ChatConversationEntry[] = [];
+
+  for await (const rawMessage of options.messages) {
+    const message = rawMessage.trim();
+    if (!message) continue;
+    if (exitCommands.includes(message.toLowerCase())) break;
+
+    const task: ChatTask = {
+      mode: "chat",
+      message,
+      history: [...history],
+      state: {
+        conversation: [...history],
+      },
+    };
+
+    const orchestrationResult = await OrchestrationRunner.run(
+      task,
+      [
+        {
+          id: config.id ?? options.agentName,
+          config,
+          requiredTools,
+          run: (input: any, context?: Record<string, any>) => {
+            if (input?.mode !== "chat") {
+              return runAgent(input, context);
+            }
+
+            return runAgent(toAgentChatInput(input), {
+              ...context,
+              chat: input,
+              conversationHistory: input.history,
+              conversationState: input.state,
+            });
+          },
+        },
+      ],
+      runtimeContext,
+    );
+
+    assertNoOrchestrationError(orchestrationResult, orchestrationId);
+
+    const output = orchestrationResult?.result;
+    const response = formatOutputForDisplay(output) ?? "";
+    history.push({ role: "user", content: message });
+    history.push({ role: "agent", content: response, output });
+
+    await options.onResponse?.(response, output, [...history]);
+  }
+
+  return {
+    agentName: options.agentName,
+    config,
+    requiredTools,
+    orchestrationId,
+    history,
   };
 }
 
